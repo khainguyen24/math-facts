@@ -13,7 +13,8 @@ On an iPad, open the link in Safari, tap Share › Add to Home Screen, and it op
 - Missed cards come back a few cards later; "Drill missed facts" after each round
 - Players, each with their own settings, 12×12 mastery grid, round history and progress charts
 - "Mix in facts I missed before" replays earlier mistakes inside a new drill
-- Scratchpad drawer for working problems out with a finger, Apple Pencil or mouse
+- Write right on the card (carries, borrowing, the answer under the line) with a finger, Apple Pencil or mouse; it clears for each new card
+- Scratchpad drawer for longer working-out
 - Sound effects built into the page, so it also works offline
 
 ## Updating

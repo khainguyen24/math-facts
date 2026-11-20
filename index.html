@@ -144,7 +144,7 @@ dialog .acts { margin-top: 14px; }
 .fact .q { color: var(--active-ink); }
 .fact .op { color: var(--accent); padding: 0 .12em; }
 /* Decimals, stacked: mono digits with the decimal points lined up */
-.stack { font: 600 clamp(18px, min(11cqi, 15cqh), 60px)/1.18 var(--f-mono); color: #e7e7e7; display: grid; justify-items: end; }
+.stack { padding-top: .55em; font: 600 clamp(18px, min(11cqi, 15cqh), 60px)/1.18 var(--f-mono); color: #e7e7e7; display: grid; justify-items: end; }
 .stack .ln2 { white-space: pre; display: flex; gap: .5em; }
 .stack .ln2 .op { color: var(--accent); }
 .stack .ln2 .pad { visibility: hidden; }
@@ -156,6 +156,12 @@ dialog .acts { margin-top: 14px; }
 .dgrid th { color: var(--muted); font-weight: 600; text-align: left; padding: 2px 8px 2px 0; }
 .dgrid td { background: var(--chip); border-radius: 6px; padding: 8px 12px; text-align: center; font-family: var(--f-mono); min-width: 96px; }
 .opts { display: grid; gap: 14px; }
+/* Ink layer over the card */
+.card .ink { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 18px; z-index: 2; pointer-events: none; touch-action: none; }
+body.ink-on .card .ink { pointer-events: auto; cursor: crosshair; }
+.card .inkclear { position: absolute; top: 10px; right: 10px; z-index: 3; display: none; font: 600 12px var(--f-body); background: var(--chip); color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; cursor: pointer; }
+body.ink-on .card .inkclear { display: block; }
+#inkBtn[aria-pressed="true"], #padBtn[aria-pressed="true"] { background: var(--accent-strong); border-color: var(--accent-strong); color: #fff; }
 /* Long decimal problems in a line shrink to fit the card */
 .fact.decline { font-size: clamp(18px, 7cqi, 64px) !important; }
 .entry.dec { font-size: 28px; width: 260px; max-width: 100%; }
@@ -336,6 +342,7 @@ dialog .acts { margin-top: 14px; }
     <div class="top">
       <button class="btn" id="quitBtn">‹ Stop</button>
       <button class="btn snd" id="sndBtn2" title="Sound on/off">🔊</button>
+      <button class="btn" id="inkBtn" title="Write on the card">✍️<span class="lbl"> On card</span></button>
       <button class="btn" id="padBtn" title="Scratchpad">✏️<span class="lbl"> Scratchpad</span></button>
       <div class="grow"><div class="bar"><i id="prog"></i></div></div>
       <div class="stats"><span class="ok" id="okN">✓ 0</span><span class="no" id="noN">✗ 0</span><span id="leftN"></span></div>
@@ -343,6 +350,8 @@ dialog .acts { margin-top: 14px; }
     <div class="card" id="card">
       <div class="face front"><span class="tag" id="tagF"></span><div class="fact" id="factF"></div></div>
       <div class="face back"><span class="tag">Answer</span><div class="fact" id="factB"></div></div>
+      <canvas class="ink" id="cardInk" aria-label="Write on the card"></canvas>
+      <button class="inkclear" id="inkClear" title="Erase your writing on the card">Erase</button>
     </div>
     <div class="feedback" id="fb"></div>
 
@@ -357,7 +366,7 @@ dialog .acts { margin-top: 14px; }
         <button class="nope" id="missBtn">✗ Missed it</button>
         <button class="yes" id="gotBtn">✓ Got it</button>
       </div>
-      <span class="hint">Space flips the card. Then press ← missed or → got it.</span>
+      <span class="hint" id="flipHint">Space flips the card. Then press ← missed or → got it.</span>
     </div>
   </section>
 
@@ -421,7 +430,7 @@ dialog .acts { margin-top: 14px; }
   let uid = load("user", users[0].id);
   if (!users.some(u => u.id === uid)) uid = users[0].id;
   const DEFAULTS = { mode: "mul", tables: [2, 3, 4, 5, 6, 7, 8, 9, 10], upTo: 12, style: "type", count: 20, grid: "mul", sound: true, mix: false,
-    lesson: "tables", decOp: "add", decPlaces: [1, 2], decAlign: "same", decWhole: 10, decLayout: "stack" };
+    lesson: "tables", decOp: "add", decPlaces: [1, 2], decAlign: "same", decWhole: 10, decLayout: "stack", ink: true };
   const saveU = (k, v) => save(k + ":" + uid, v);
   // S: settings, P: progress per fact { "mul:7x8": [right, wrong, streak] }, H: finished rounds
   let S, P, H;
@@ -465,7 +474,7 @@ dialog .acts { margin-top: 14px; }
       $("startBtn").disabled = !n;
       $("deckInfo").textContent = n ? `${n} facts in these tables` + (S.count && S.count < n ? `, ${S.count} per round` : "") : "Pick at least one table";
     }
-    drawGrid(); drawSound(); drawUsers(); drawHistory();
+    drawGrid(); drawSound(); drawUsers(); drawHistory(); drawInk();
     const pool = missedPool();
     $("mixChip").setAttribute("aria-pressed", !!S.mix);
     $("mixCnt").textContent = pool.length;
@@ -721,24 +730,50 @@ dialog .acts { margin-top: 14px; }
   if (matchMedia("(pointer:coarse)").matches) { $("entry").setAttribute("inputmode", "none"); $("entry").readOnly = true; $("typeHint").textContent = "Tap the numbers, then OK."; }
 
   // ---- Scratchpad -----------------------------------------------------------------------------------
-  const cv = $("padCanvas"), cx = cv.getContext("2d");
-  let pen = "#e7e7e7", erasing = false, drawing = null;
-  function sizeCanvas() {
-    const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
-    if (!r.width || !r.height) return;
-    const w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
-    if (cv.width === w && cv.height === h) return;
-    const old = cv.width ? cx.getImageData(0, 0, cv.width, cv.height) : null;
-    cv.width = w; cv.height = h;
-    if (old) cx.putImageData(old, 0, 0);
+  // A drawing surface: finger, Apple Pencil or mouse. Used by the scratchpad and by the ink layer on the card.
+  let pen = "#e7e7e7", erasing = false;
+  function inkLayer(cv, opts = {}) {
+    const cx = cv.getContext("2d"); let drawing = null;
+    function size() {
+      const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+      if (!r.width || !r.height) return;
+      const w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
+      if (cv.width === w && cv.height === h) return;
+      const old = cv.width ? cx.getImageData(0, 0, cv.width, cv.height) : null;
+      cv.width = w; cv.height = h;
+      if (old) cx.putImageData(old, 0, 0);
+    }
+    const at = e => { const r = cv.getBoundingClientRect(), dpr = cv.width / r.width; return [(e.clientX - r.left) * dpr, (e.clientY - r.top) * dpr]; };
+    cv.addEventListener("pointerdown", e => {
+      e.preventDefault(); size(); cv.setPointerCapture(e.pointerId);
+      drawing = { id: e.pointerId, p: at(e) };
+      const dpr = cv.width / cv.getBoundingClientRect().width, er = opts.color ? false : erasing, col = opts.color || pen;
+      cx.lineCap = cx.lineJoin = "round";
+      cx.globalCompositeOperation = er ? "destination-out" : "source-over";
+      cx.strokeStyle = col; cx.fillStyle = col;
+      cx.lineWidth = (er ? 26 : opts.width || 3.5) * dpr;
+      cx.beginPath(); cx.arc(drawing.p[0], drawing.p[1], cx.lineWidth / 2, 0, Math.PI * 2); cx.fill();
+    });
+    cv.addEventListener("pointermove", e => {
+      if (!drawing || drawing.id !== e.pointerId) return;
+      const pts = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+      cx.beginPath(); cx.moveTo(...drawing.p);
+      for (const pe of (pts.length ? pts : [e])) { const q = at(pe); cx.lineTo(...q); drawing.p = q; }
+      cx.stroke();
+    });
+    const endDraw = e => { if (drawing && drawing.id === e.pointerId) drawing = null; };
+    cv.addEventListener("pointerup", endDraw); cv.addEventListener("pointercancel", endDraw);
+    cv.addEventListener("click", e => e.stopPropagation());
+    return { size, clear: () => cx.clearRect(0, 0, cv.width, cv.height) };
   }
+  const pad = inkLayer($("padCanvas"));
+  const sizeCanvas = pad.size, clearPad = pad.clear;
   function drawPens() {
     document.querySelectorAll("[data-pen]").forEach(b => b.setAttribute("aria-pressed", !erasing && b.dataset.pen === pen));
     $("eraser").setAttribute("aria-pressed", erasing);
   }
-  function openPad() { document.body.classList.add("pad-open"); setTimeout(sizeCanvas, 280); $("padBtn").setAttribute("aria-pressed", true); }
-  function closePad() { document.body.classList.remove("pad-open"); $("padBtn")?.setAttribute("aria-pressed", false); }
-  const clearPad = () => cx.clearRect(0, 0, cv.width, cv.height);
+  function openPad() { document.body.classList.add("pad-open"); setTimeout(() => { sizeCanvas(); cardInk.size(); }, 280); $("padBtn").setAttribute("aria-pressed", true); }
+  function closePad() { document.body.classList.remove("pad-open"); $("padBtn")?.setAttribute("aria-pressed", false); setTimeout(() => cardInk.size(), 280); }
   $("padBtn").onclick = e => { document.body.classList.contains("pad-open") ? closePad() : openPad(); e.currentTarget.blur(); };
   $("padClose").onclick = closePad;
   $("padClear").onclick = clearPad;
@@ -746,27 +781,17 @@ dialog .acts { margin-top: 14px; }
   document.querySelectorAll("[data-pen]").forEach(b => b.onclick = () => { pen = b.dataset.pen; erasing = false; drawPens(); });
   $("autoClear").checked = load("autoClear", true);
   $("autoClear").onchange = e => save("autoClear", e.target.checked);
-  addEventListener("resize", () => { if (document.body.classList.contains("pad-open")) sizeCanvas(); });
-  const at = e => { const r = cv.getBoundingClientRect(), dpr = cv.width / r.width; return [(e.clientX - r.left) * dpr, (e.clientY - r.top) * dpr]; };
-  cv.addEventListener("pointerdown", e => {
-    e.preventDefault(); sizeCanvas(); cv.setPointerCapture(e.pointerId);
-    drawing = { id: e.pointerId, p: at(e) };
-    const dpr = cv.width / cv.getBoundingClientRect().width;
-    cx.lineCap = cx.lineJoin = "round";
-    cx.globalCompositeOperation = erasing ? "destination-out" : "source-over";
-    cx.strokeStyle = pen; cx.fillStyle = pen;
-    cx.lineWidth = (erasing ? 26 : 3.5) * dpr;
-    cx.beginPath(); cx.arc(drawing.p[0], drawing.p[1], cx.lineWidth / 2, 0, Math.PI * 2); cx.fill();
-  });
-  cv.addEventListener("pointermove", e => {
-    if (!drawing || drawing.id !== e.pointerId) return;
-    const pts = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
-    cx.beginPath(); cx.moveTo(...drawing.p);
-    for (const pe of (pts.length ? pts : [e])) { const q = at(pe); cx.lineTo(...q); drawing.p = q; }
-    cx.stroke();
-  });
-  const endDraw = e => { if (drawing && drawing.id === e.pointerId) drawing = null; };
-  cv.addEventListener("pointerup", endDraw); cv.addEventListener("pointercancel", endDraw);
+  addEventListener("resize", () => { if (document.body.classList.contains("pad-open")) sizeCanvas(); cardInk.size(); });
+
+  // Ink right on the card: carry digits, borrowing, the answer under the line. Cleared for each card.
+  const cardInk = inkLayer($("cardInk"), { color: "#6cc4ff", width: 3 });
+  function drawInk() {
+    document.body.classList.toggle("ink-on", !!S.ink);
+    $("inkBtn").setAttribute("aria-pressed", !!S.ink);
+    $("inkBtn").title = S.ink ? "Writing on the card is on" : "Write on the card";
+  }
+  $("inkBtn").onclick = e => { S.ink = !S.ink; saveU("settings", S); drawInk(); cardInk.size(); e.currentTarget.blur(); };
+  $("inkClear").onclick = e => { e.stopPropagation(); cardInk.clear(); };
   drawPens();
 
   let roundMode = null, roundKind = "round", roundLesson = "tables";
@@ -778,7 +803,7 @@ dialog .acts { margin-top: 14px; }
     queue = deck.slice(); total = queue.length; ok = no = 0; missed = []; firstTry = new Set(); t0 = Date.now();
     $("typeUI").hidden = S.style !== "type"; $("flipUI").hidden = S.style !== "flip";
     $("card").classList.toggle("flip", S.style === "flip");
-    show("drill"); next();
+    show("drill"); next(); cardInk.size();
   }
   let replayIds = new Set(), mixedN = 0;
   function roundDeck() {
@@ -805,6 +830,7 @@ dialog .acts { margin-top: 14px; }
     if (!queue.length) return finish();
     cur = queue.shift(); locked = false;
     if ($("autoClear").checked) clearPad();
+    cardInk.clear();
     const [x, o, y, z] = text(cur);
     $("tagF").textContent = (replayIds.has(id(cur)) ? "Replay · " : "") + { mul: "Multiply", div: "Divide", add: "Add", sub: "Subtract" }[cur.k];
     if (isDec(cur) && S.decLayout === "stack") {
@@ -825,7 +851,7 @@ dialog .acts { margin-top: 14px; }
 
   // Worksheet-style card: numbers right-aligned with their decimal points in one column
   function stacked(f, withAns) {
-    const [x, o, y, z] = text(f), nums = withAns ? [x, y, z] : [x, y];
+    const [x, o, y, z] = text(f), nums = [x, y, z];
     const intW = Math.max(...nums.map(n => n.split(".")[0].length)), fracW = Math.max(...nums.map(n => (n.split(".")[1] || "").length));
     const cell = n => {
       const [w, fr = ""] = n.split(".");
@@ -834,7 +860,8 @@ dialog .acts { margin-top: 14px; }
     };
     return `<div class="ln2"><span class="op pad">${o}</span><span>${cell(x)}</span></div>`
       + `<div class="ln2"><span class="op">${o}</span><span>${cell(y)}</span></div><div class="rule"></div>`
-      + (withAns ? `<div class="ln2 ans"><span class="op pad">${o}</span><span>${cell(z)}</span></div>` : `<div class="q">?</div>`);
+      // No "?" on the front: the row under the line stays empty so the answer can be written there
+      + `<div class="ln2 ans"${withAns ? "" : ' style="visibility:hidden"'}><span class="op pad">${o}</span><span>${cell(z)}</span></div>`;
   }
 
   function record(right) {

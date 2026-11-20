@@ -72,6 +72,7 @@ body.pad-open .lbl { display: none; }
   body.pad-open .tag, body.pad-open #typeHint, body.pad-open #flipUI .hint { display: none; }
   body.pad-open .answer { gap: 6px; }
   body.pad-open .entry { font-size: 24px; padding: 4px; width: 140px; }
+  body.pad-open .entry.dec { font-size: 20px; width: 190px; }
   body.pad-open .keypad button { height: 42px; font-size: 20px; }
   body.pad-open .keypad.dec { grid-template-columns: repeat(5, 58px); }
   body.pad-open .feedback { min-height: 0; font-size: 13px; }
@@ -155,6 +156,9 @@ dialog .acts { margin-top: 14px; }
 .dgrid th { color: var(--muted); font-weight: 600; text-align: left; padding: 2px 8px 2px 0; }
 .dgrid td { background: var(--chip); border-radius: 6px; padding: 8px 12px; text-align: center; font-family: var(--f-mono); min-width: 96px; }
 .opts { display: grid; gap: 14px; }
+/* Long decimal problems in a line shrink to fit the card */
+.fact.decline { font-size: clamp(18px, 7cqi, 64px) !important; }
+.entry.dec { font-size: 28px; width: 260px; max-width: 100%; }
 .tag { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
 .card.right .face { border-color: var(--good); box-shadow: 0 0 0 1px var(--good), 0 0 28px rgba(25,227,107,.18); }
 .card.wrong .face { border-color: var(--bad); box-shadow: 0 0 0 1px var(--bad), 0 0 28px rgba(244,135,113,.18); }
@@ -235,6 +239,8 @@ dialog .acts { margin-top: 14px; }
         <div class="chips">
           <button class="chip" data-decwhole="10">Under 10</button>
           <button class="chip" data-decwhole="100">Under 100</button>
+          <button class="chip" data-decwhole="1000">Under 1,000</button>
+          <button class="chip" data-decwhole="10000">Under 10,000</button>
         </div>
       </div>
       <div class="row">
@@ -805,7 +811,7 @@ dialog .acts { margin-top: 14px; }
       $("factF").className = $("factB").className = "stack";
       $("factF").innerHTML = stacked(cur, false); $("factB").innerHTML = stacked(cur, true);
     } else {
-      $("factF").className = $("factB").className = "fact";
+      $("factF").className = $("factB").className = isDec(cur) ? "fact decline" : "fact";
       $("factF").innerHTML = `${x}<span class="op">${o}</span>${y}<span class="op">=</span><span class="q">?</span>`;
       $("factB").innerHTML = `${x}<span class="op">${o}</span>${y}<span class="op">=</span><span class="q">${z}</span>`;
     }
@@ -888,10 +894,11 @@ dialog .acts { margin-top: 14px; }
 
   // Keypad
   // Decimals get a "." key, with OK across the bottom
-  const maxLen = () => roundLesson === "dec" ? 9 : 4;
+  const maxLen = () => roundLesson === "dec" ? 11 : 4;
   function drawKeypad() {
     const keys = roundLesson === "dec" ? [1, 2, 3, 4, 5, 6, 7, 8, 9, ".", 0, "⌫", "OK"] : [1, 2, 3, 4, 5, 6, 7, 8, 9, "⌫", 0, "OK"];
     $("keypad").classList.toggle("dec", roundLesson === "dec");
+    $("entry").classList.toggle("dec", roundLesson === "dec");
     $("keypad").innerHTML = keys.map(k => `<button data-k="${k}" class="${k === "OK" ? "go" + (roundLesson === "dec" ? " wide" : "") : k === "." ? "dotk" : ""}">${k}</button>`).join("");
   }
   const typeKey = k => {

@@ -73,6 +73,7 @@ body.pad-open .lbl { display: none; }
   body.pad-open .answer { gap: 6px; }
   body.pad-open .entry { font-size: 24px; padding: 4px; width: 140px; }
   body.pad-open .keypad button { height: 42px; font-size: 20px; }
+  body.pad-open .keypad.dec { grid-template-columns: repeat(5, 58px); }
   body.pad-open .feedback { min-height: 0; font-size: 13px; }
 }
 .pad canvas { flex: 1; width: 100%; min-height: 0; touch-action: none; cursor: crosshair; background:
@@ -132,7 +133,7 @@ dialog .acts { margin-top: 14px; }
 .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s; }
 .stats { display: flex; gap: 16px; font-family: var(--f-mono); font-size: 14px; }
 .stats .ok { color: var(--good); } .stats .no { color: var(--bad); }
-.card { container-type: inline-size; position: relative; perspective: 1200px; height: clamp(220px, 38vh, 320px); cursor: default; user-select: none; }
+.card { container-type: size; position: relative; perspective: 1200px; height: clamp(220px, 38vh, 320px); cursor: default; user-select: none; }
 .card.flip { cursor: pointer; }
 .face { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; backface-visibility: hidden; transition: transform .35s ease, border-color .2s, box-shadow .2s; }
 .face.back { transform: rotateY(180deg); }
@@ -141,6 +142,19 @@ dialog .acts { margin-top: 14px; }
 .fact { font: 700 clamp(40px, 15cqi, 92px)/1 var(--f-display); color: #e7e7e7; letter-spacing: 0.01em; font-variant-numeric: tabular-nums; }
 .fact .q { color: var(--active-ink); }
 .fact .op { color: var(--accent); padding: 0 .12em; }
+/* Decimals, stacked: mono digits with the decimal points lined up */
+.stack { font: 600 clamp(18px, min(11cqi, 15cqh), 60px)/1.18 var(--f-mono); color: #e7e7e7; display: grid; justify-items: end; }
+.stack .ln2 { white-space: pre; display: flex; gap: .5em; }
+.stack .ln2 .op { color: var(--accent); }
+.stack .ln2 .pad { visibility: hidden; }
+.stack .dot { color: var(--active-ink); }
+.stack .rule { width: 100%; border-top: 3px solid var(--muted); margin: .12em 0 .1em; }
+.stack .q { color: var(--active-ink); justify-self: center; }
+.stack .ans { color: var(--active-ink); }
+.dgrid { border-collapse: separate; border-spacing: 4px; font-size: 13px; }
+.dgrid th { color: var(--muted); font-weight: 600; text-align: left; padding: 2px 8px 2px 0; }
+.dgrid td { background: var(--chip); border-radius: 6px; padding: 8px 12px; text-align: center; font-family: var(--f-mono); min-width: 96px; }
+.opts { display: grid; gap: 14px; }
 .tag { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
 .card.right .face { border-color: var(--good); box-shadow: 0 0 0 1px var(--good), 0 0 28px rgba(25,227,107,.18); }
 .card.wrong .face { border-color: var(--bad); box-shadow: 0 0 0 1px var(--bad), 0 0 28px rgba(244,135,113,.18); }
@@ -152,6 +166,8 @@ dialog .acts { margin-top: 14px; }
 .keypad button { font: 600 24px var(--f-mono); height: 56px; background: var(--chip); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
 .keypad button:active { background: var(--active); border-color: var(--accent); }
 .keypad .go { background: var(--accent-strong); border-color: var(--accent-strong); color: #fff; font-family: var(--f-body); font-size: 17px; }
+.keypad .go.wide { grid-column: span 3; }
+.keypad .dotk { font-size: 30px; line-height: 1; }
 .grade { display: flex; gap: 10px; justify-content: center; }
 .grade button { font: 600 16px var(--f-body); padding: 12px 22px; border-radius: 999px; cursor: pointer; border: 1px solid var(--line); background: var(--chip); color: var(--ink); }
 .grade .yes { border-color: var(--good); color: var(--good); }
@@ -176,7 +192,7 @@ dialog .acts { margin-top: 14px; }
   <section id="setup" style="display:grid;gap:22px">
     <header>
       <h1>Math Facts Trainer</h1>
-      <p class="sub">Flash card drills for the times tables and division facts.</p>
+      <p class="sub">Flash card drills for times tables, division and decimals.</p>
     </header>
 
     <div class="panel">
@@ -187,6 +203,49 @@ dialog .acts { margin-top: 14px; }
     </div>
 
     <div class="panel">
+      <div class="row">
+        <span class="label">Lesson</span>
+        <div class="chips" id="lessonChips">
+          <button class="chip" data-lesson="tables">Times tables &amp; division</button>
+          <button class="chip" data-lesson="dec">Adding &amp; subtracting decimals</button>
+        </div>
+      </div>
+      <div class="opts" id="decOpts">
+      <div class="row">
+        <span class="label">Problems</span>
+        <div class="chips">
+          <button class="chip" data-decop="add">Adding +</button>
+          <button class="chip" data-decop="sub">Subtracting −</button>
+          <button class="chip" data-decop="mix">Mixed</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="label">Decimal places</span>
+        <div class="chips" id="placeChips"></div>
+      </div>
+      <div class="row">
+        <span class="label">Line them up</span>
+        <div class="chips">
+          <button class="chip" data-decalign="same">Same places in both numbers</button>
+          <button class="chip" data-decalign="diff">Different places (like 3.5 + 1.275)</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="label">Whole-number part</span>
+        <div class="chips">
+          <button class="chip" data-decwhole="10">Under 10</button>
+          <button class="chip" data-decwhole="100">Under 100</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="label">Show the problem</span>
+        <div class="chips">
+          <button class="chip" data-declayout="stack">Stacked, points lined up</button>
+          <button class="chip" data-declayout="line">In a line</button>
+        </div>
+      </div>
+      </div>
+      <div class="opts" id="tablesOpts">
       <div class="row">
         <span class="label">Facts</span>
         <div class="chips" id="modeChips">
@@ -203,6 +262,7 @@ dialog .acts { margin-top: 14px; }
         <span class="label">Times / divided into, up to</span>
         <div class="chips" id="upToChips"></div>
       </div>
+      </div>
       <div class="row">
         <span class="label">How to answer</span>
         <div class="chips" id="styleChips">
@@ -211,8 +271,8 @@ dialog .acts { margin-top: 14px; }
         </div>
       </div>
       <div class="row">
-        <span class="label">Replay missed facts</span>
-        <div class="chips"><button class="chip" id="mixChip">Mix in facts I missed before <span class="cnt" id="mixCnt"></span></button></div>
+        <span class="label">Replay missed problems</span>
+        <div class="chips"><button class="chip" id="mixChip">Mix in ones I missed before <span class="cnt" id="mixCnt"></span></button></div>
         <span class="hint" id="mixHint"></span>
       </div>
       <div class="row">
@@ -250,6 +310,8 @@ dialog .acts { margin-top: 14px; }
         </div>
       </div>
       <div class="grid" id="grid"></div>
+      <table class="dgrid" id="dgrid"></table>
+      <span class="hint" id="dgridHint">Each box shows % right on the first try · problems done, grouped by the most decimal places in the problem.</span>
       <div class="legend">
         <span><i style="background:var(--chip)"></i>Not tried</span>
         <span><i style="background:#7a3a30"></i>Needs work</span>
@@ -257,7 +319,7 @@ dialog .acts { margin-top: 14px; }
         <span><i style="background:#1d7a45"></i>Mastered</span>
       </div>
       <div class="acts">
-        <button class="btn" id="weakBtn">Drill my weakest facts</button>
+        <button class="btn" id="weakBtn">Drill my weakest</button>
         <button class="btn" id="resetBtn">Reset progress</button>
       </div>
     </div>
@@ -301,11 +363,11 @@ dialog .acts { margin-top: 14px; }
       <div class="hint" id="scoreDetail"></div>
       <div class="hint" id="savedNote"></div>
       <div id="missedWrap" class="row">
-        <span class="label">Missed facts</span>
+        <span class="label">Missed problems</span>
         <div class="missed" id="missedList"></div>
       </div>
       <div class="acts">
-        <button class="play" id="redoMissed">Drill missed facts</button>
+        <button class="play" id="redoMissed">Drill missed problems</button>
         <button class="btn" id="againBtn">New round</button>
         <button class="btn" id="homeBtn">Back to setup</button>
       </div>
@@ -352,7 +414,8 @@ dialog .acts { margin-top: 14px; }
   }
   let uid = load("user", users[0].id);
   if (!users.some(u => u.id === uid)) uid = users[0].id;
-  const DEFAULTS = { mode: "mul", tables: [2, 3, 4, 5, 6, 7, 8, 9, 10], upTo: 12, style: "type", count: 20, grid: "mul", sound: true, mix: false };
+  const DEFAULTS = { mode: "mul", tables: [2, 3, 4, 5, 6, 7, 8, 9, 10], upTo: 12, style: "type", count: 20, grid: "mul", sound: true, mix: false,
+    lesson: "tables", decOp: "add", decPlaces: [1, 2], decAlign: "same", decWhole: 10, decLayout: "stack" };
   const saveU = (k, v) => save(k + ":" + uid, v);
   // S: settings, P: progress per fact { "mul:7x8": [right, wrong, streak] }, H: finished rounds
   let S, P, H;
@@ -368,6 +431,7 @@ dialog .acts { margin-top: 14px; }
   const tableChips = $("tableChips");
   for (let t = 1; t <= 12; t++) tableChips.insertAdjacentHTML("beforeend", `<button class="chip num" data-t="${t}">${t}</button>`);
   [10, 12].forEach(n => $("upToChips").insertAdjacentHTML("beforeend", `<button class="chip num" data-u="${n}">${n}</button>`));
+  [1, 2, 3, 4].forEach(n => $("placeChips").insertAdjacentHTML("beforeend", `<button class="chip num" data-place="${n}">${n}</button>`));
   [10, 20, 30, 0].forEach(n => $("countChips").insertAdjacentHTML("beforeend", `<button class="chip" data-c="${n}">${n || "Every fact"}</button>`));
 
   function render() {
@@ -377,14 +441,30 @@ dialog .acts { margin-top: 14px; }
     document.querySelectorAll("[data-style]").forEach(b => b.setAttribute("aria-pressed", b.dataset.style === S.style));
     document.querySelectorAll("[data-c]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.c === S.count));
     document.querySelectorAll("[data-g]").forEach(b => b.setAttribute("aria-pressed", b.dataset.g === S.grid));
-    const n = buildFacts().length;
-    $("startBtn").disabled = !n;
-    $("deckInfo").textContent = n ? `${n} facts in these tables` + (S.count && S.count < n ? `, ${S.count} per round` : "") : "Pick at least one table";
+    const dec = S.lesson === "dec";
+    document.querySelectorAll("[data-lesson]").forEach(b => b.setAttribute("aria-pressed", b.dataset.lesson === S.lesson));
+    document.querySelectorAll("[data-decop]").forEach(b => b.setAttribute("aria-pressed", b.dataset.decop === S.decOp));
+    document.querySelectorAll("[data-place]").forEach(b => b.setAttribute("aria-pressed", S.decPlaces.includes(+b.dataset.place)));
+    document.querySelectorAll("[data-decalign]").forEach(b => b.setAttribute("aria-pressed", b.dataset.decalign === S.decAlign));
+    document.querySelectorAll("[data-decwhole]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.decwhole === S.decWhole));
+    document.querySelectorAll("[data-declayout]").forEach(b => b.setAttribute("aria-pressed", b.dataset.declayout === S.decLayout));
+    $("decOpts").hidden = !dec; $("tablesOpts").hidden = dec;
+    $("gridChips").hidden = dec; $("grid").hidden = dec; $("dgrid").hidden = !dec; $("dgridHint").hidden = !dec;
+    $("countChips").querySelector('[data-c="0"]').hidden = dec;
+    if (dec) {
+      $("startBtn").disabled = false;
+      $("deckInfo").textContent = `New problems every round, ${decCount()} per round`;
+    } else {
+      const n = buildFacts().length;
+      $("startBtn").disabled = !n;
+      $("deckInfo").textContent = n ? `${n} facts in these tables` + (S.count && S.count < n ? `, ${S.count} per round` : "") : "Pick at least one table";
+    }
     drawGrid(); drawSound(); drawUsers(); drawHistory();
     const pool = missedPool();
     $("mixChip").setAttribute("aria-pressed", !!S.mix);
     $("mixCnt").textContent = pool.length;
-    $("mixHint").textContent = !pool.length ? "No missed facts to replay yet." : S.mix ? `Up to a third of each round will be facts you got wrong before, from any table. A fact leaves the list after you get it right twice in a row.` : `${pool.length} fact${pool.length === 1 ? "" : "s"} still to fix.`;
+    const what = dec ? "decimal problem" : "fact";
+    $("mixHint").textContent = !pool.length ? `No missed ${what}s to replay yet.` : S.mix ? `Up to a third of each round will be ${what}s you got wrong before${dec ? "" : ", from any table"}. One leaves the list after you get it right twice in a row.` : `${pool.length} ${what}${pool.length === 1 ? "" : "s"} still to fix.`;
     saveU("settings", S);
   }
   document.querySelector("#setup").addEventListener("click", e => {
@@ -396,6 +476,12 @@ dialog .acts { margin-top: 14px; }
     else if (d.style) S.style = d.style;
     else if (d.c !== undefined) S.count = +d.c;
     else if (d.g) S.grid = d.g;
+    else if (d.lesson) S.lesson = d.lesson;
+    else if (d.decop) S.decOp = d.decop;
+    else if (d.place) { const n = +d.place; if (S.decPlaces.includes(n)) { if (S.decPlaces.length > 1) S.decPlaces = S.decPlaces.filter(x => x !== n); } else S.decPlaces = [...S.decPlaces, n].sort(); }
+    else if (d.decalign) S.decAlign = d.decalign;
+    else if (d.decwhole) S.decWhole = +d.decwhole;
+    else if (d.declayout) S.decLayout = d.declayout;
     else if (b.id === "allT") S.tables = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
     else if (b.id === "noneT") S.tables = [];
     else if (b.id === "sndBtn") S.sound = !S.sound;
@@ -408,9 +494,45 @@ dialog .acts { margin-top: 14px; }
   });
 
   // ---- Facts -------------------------------------------------------------------------------------
-  // A fact is { k: "mul"|"div", a, b }. mul: a × b (a is the table). div: (a·b) ÷ a = b.
-  const id = f => `${f.k}:${f.a}x${f.b}`;
-  const text = f => f.k === "mul" ? [f.a, "×", f.b, f.a * f.b] : [f.a * f.b, "÷", f.a, f.b];
+  // A table fact is { k: "mul"|"div", a, b }. mul: a × b (a is the table). div: (a·b) ÷ a = b.
+  // A decimal problem is { k: "add"|"sub", x, xp, y, yp }: x and y are in ten-thousandths (3.5 → 35000) with
+  // xp / yp decimal places, so the sums are exact whole-number math.
+  const isDec = f => f.k === "add" || f.k === "sub";
+  const decStr = (v, p) => { const s = String(v).padStart(5, "0"), w = s.slice(0, -4).replace(/^0+(?=\d)/, ""); return p ? `${w}.${s.slice(-4, -4 + p || undefined)}` : w; };
+  const decAns = f => f.k === "add" ? f.x + f.y : f.x - f.y;
+  const ansPlaces = f => Math.max(f.xp, f.yp);
+  const id = f => isDec(f) ? `${f.k}:${decStr(f.x, f.xp)}${f.k === "add" ? "+" : "-"}${decStr(f.y, f.yp)}` : `${f.k}:${f.a}x${f.b}`;
+  const text = f => isDec(f) ? [decStr(f.x, f.xp), f.k === "add" ? "+" : "−", decStr(f.y, f.yp), decStr(decAns(f), ansPlaces(f))]
+    : f.k === "mul" ? [f.a, "×", f.b, f.a * f.b] : [f.a * f.b, "÷", f.a, f.b];
+  const rnd = n => Math.random() * n | 0;
+  const decCount = () => S.count || 20;
+  // A number with exactly p decimal places (last digit not 0) and a whole part under S.decWhole
+  function decNum(p) {
+    let frac; do { frac = rnd(10 ** p); } while (frac % 10 === 0);
+    return rnd(S.decWhole) * 10000 + frac * 10 ** (4 - p);
+  }
+  function makeDec(k) {
+    const xp = S.decPlaces[rnd(S.decPlaces.length)];
+    let yp = xp;
+    if (S.decAlign === "diff" && S.decPlaces.length > 1) { do { yp = S.decPlaces[rnd(S.decPlaces.length)]; } while (yp === xp); }
+    else if (S.decAlign === "diff") yp = xp === 4 ? 4 : Math.min(4, xp + 1 + rnd(4 - xp));
+    let f = { k, x: decNum(xp), xp, y: decNum(yp), yp };
+    if (rnd(2)) f = { k, x: f.y, xp: f.yp, y: f.x, yp: f.xp };
+    // Subtraction stays at zero or above: the bigger number goes on top
+    if (k === "sub" && f.x < f.y) f = { k, x: f.y, xp: f.yp, y: f.x, yp: f.xp };
+    if (k === "sub" && f.x === f.y) return makeDec(k);
+    return f;
+  }
+  function decDeck(n) {
+    const out = [], seen = new Set();
+    for (let tries = 0; out.length < n && tries < n * 50; tries++) {
+      const k = S.decOp === "mix" ? (rnd(2) ? "add" : "sub") : S.decOp, f = makeDec(k);
+      if (!seen.has(id(f))) { seen.add(id(f)); out.push(f); }
+    }
+    return out;
+  }
+  // Decimal answers: "3.5", "3.50" and "03.5" are all right; compared in ten-thousandths
+  const decVal = v => /^\d*\.?\d*$/.test(v) && /\d/.test(v) ? Math.round(parseFloat(v) * 10000) : NaN;
   const plain = f => { const [x, o, y, z] = text(f); return `${x} ${o} ${y} = ${z}`; };
   function buildFacts(mode = S.mode) {
     const kinds = mode === "mix" ? ["mul", "div"] : [mode], out = [];
@@ -488,14 +610,24 @@ dialog .acts { margin-top: 14px; }
 
   // ---- Missed facts to replay ----------------------------------------------------------------------
   // A fact stays in the replay list from a miss until it's answered right twice in a row
-  const parseId = k => { const m = k.match(/^(mul|div):(\d+)x(\d+)$/); return m && { k: m[1], a: +m[2], b: +m[3] }; };
+  const parseId = k => {
+    let m = k.match(/^(mul|div):(\d+)x(\d+)$/); if (m) return { k: m[1], a: +m[2], b: +m[3] };
+    m = k.match(/^(add|sub):(\d+(?:\.\d+)?)[+-](\d+(?:\.\d+)?)$/); if (!m) return null;
+    const pl = s => (s.split(".")[1] || "").length;
+    return { k: m[1], x: decVal(m[2]), xp: pl(m[2]), y: decVal(m[3]), yp: pl(m[3]) };
+  };
+  const inLesson = f => (S.lesson === "dec") === isDec(f);
   function missedPool() {
-    return Object.entries(P).filter(([, p]) => p[1] > 0 && p[2] < 2).map(([k, p]) => ({ f: parseId(k), p })).filter(x => x.f)
+    return Object.entries(P).filter(([, p]) => p[1] > 0 && p[2] < 2).map(([k, p]) => ({ f: parseId(k), p })).filter(x => x.f && inLesson(x.f))
       .sort((x, y) => (y.p[1] / (y.p[0] + y.p[1])) - (x.p[1] / (x.p[0] + x.p[1]))).map(x => x.f);
   }
 
   // ---- History charts -------------------------------------------------------------------------------
   const DRILL = { mul: "×", div: "÷", mix: "× ÷" };
+  const placesTxt = ps => ps.length === 1 ? `${ps[0]} place${ps[0] > 1 ? "s" : ""}` : `${ps[0]}–${ps[ps.length - 1]} places`;
+  const drillTxt = r => r.lesson === "dec"
+    ? `${{ add: "+", sub: "−", mix: "+ −" }[r.decOp]} decimals, ${r.kind === "missed" ? "missed problems" : r.kind === "weak" ? "weakest problems" : placesTxt(r.decPlaces)}`
+    : `${DRILL[r.mode]} ${tablesTxt(r)}`;
   const fmtT = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   const fmtD = t => new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   const fmtDT = t => new Date(t).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -522,7 +654,7 @@ dialog .acts { margin-top: 14px; }
       const r = rows[+i], [px] = pts[+i], sc = svg.getBoundingClientRect().width / W;
       xh.setAttribute("x1", px); xh.setAttribute("x2", px); xh.setAttribute("visibility", "visible");
       tip.hidden = false;
-      tip.innerHTML = `<b>${fmtY(val(r))}</b> · ${fmtDT(r.at)}<br>${DRILL[r.mode]} ${tablesTxt(r)} · ${r.ok}/${r.n} · ${fmtT(r.secs)}`;
+      tip.innerHTML = `<b>${fmtY(val(r))}</b> · ${fmtDT(r.at)}<br>${drillTxt(r)} · ${r.ok}/${r.n} · ${fmtT(r.secs)}`;
       const left = px * sc, tw = tip.offsetWidth, cw = el.clientWidth;
       tip.style.left = Math.max(0, Math.min(cw - tw, left - tw / 2)) + "px";
       tip.style.top = "8px";
@@ -536,12 +668,33 @@ dialog .acts { margin-top: 14px; }
     lineChart($("chAcc"), rows, r => Math.round(r.ok / r.n * 100), 100, [0, 50, 100], v => v + "%");
     const spd = r => +(r.secs / r.n).toFixed(1), top = Math.max(5, Math.ceil(Math.max(...rows.map(spd)) / 5) * 5);
     lineChart($("chSpd"), rows, spd, top, [0, top / 2, top], v => v + " s per card");
-    $("histBody").innerHTML = H.slice(-10).reverse().map(r => `<tr><td>${fmtDT(r.at)}</td><td>${DRILL[r.mode]} ${tablesTxt(r)}${r.mixed ? ` <span class="hint">+${r.mixed} replay</span>` : ""}</td><td class="n">${r.ok}/${r.n}</td><td class="n">${fmtT(r.secs)}</td></tr>`).join("");
+    $("histBody").innerHTML = H.slice(-10).reverse().map(r => `<tr><td>${fmtDT(r.at)}</td><td>${drillTxt(r)}${r.mixed ? ` <span class="hint">+${r.mixed} replay</span>` : ""}</td><td class="n">${r.ok}/${r.n}</td><td class="n">${fmtT(r.secs)}</td></tr>`).join("");
   }
 
   // ---- Mastery grid ------------------------------------------------------------------------------
   const COL = { 1: "#7a3a30", 2: "#7a6430", 3: "#1d7a45" };
+  function drawDecGrid() {
+    // Accuracy by operation and by the most decimal places in the problem
+    const st = {};
+    for (const [k, p] of Object.entries(P)) {
+      const f = parseId(k); if (!f || !isDec(f)) continue;
+      const key = f.k + ansPlaces(f), a = st[key] || (st[key] = [0, 0]);
+      a[0] += p[0]; a[1] += p[1];
+    }
+    let h = `<tr><th></th><th>Adding +</th><th>Subtracting −</th></tr>`;
+    for (let pl = 1; pl <= 4; pl++) {
+      h += `<tr><th>${pl} place${pl > 1 ? "s" : ""}</th>`;
+      for (const k of ["add", "sub"]) {
+        const a = st[k + pl], n = a ? a[0] + a[1] : 0, pct = n ? Math.round(a[0] / n * 100) : null;
+        const lv = !n ? 0 : pct >= 90 && n >= 10 ? 3 : pct >= 70 ? 2 : 1;
+        h += `<td style="${lv ? "background:" + COL[lv] : ""}" title="${n ? `${a[0]} right, ${a[1]} wrong` : "Not tried"}">${n ? pct + "% · " + n : "–"}</td>`;
+      }
+      h += "</tr>";
+    }
+    $("dgrid").innerHTML = h;
+  }
   function drawGrid() {
+    drawDecGrid();
     const k = S.grid; let h = `<div class="h">${k === "mul" ? "×" : "÷"}</div>`;
     for (let b = 1; b <= 12; b++) h += `<div class="h">${b}</div>`;
     for (let a = 1; a <= 12; a++) {
@@ -610,10 +763,11 @@ dialog .acts { margin-top: 14px; }
   cv.addEventListener("pointerup", endDraw); cv.addEventListener("pointercancel", endDraw);
   drawPens();
 
-  let roundMode = null, roundKind = "round";
+  let roundMode = null, roundKind = "round", roundLesson = "tables";
   function start(deck, kind = "round") {
     if (kind !== "round") { replayIds = new Set(); mixedN = 0; }
-    roundMode = S.mode; roundKind = kind;
+    roundMode = S.mode; roundKind = kind; roundLesson = S.lesson;
+    drawKeypad();
     lastDeck = deck.slice();
     queue = deck.slice(); total = queue.length; ok = no = 0; missed = []; firstTry = new Set(); t0 = Date.now();
     $("typeUI").hidden = S.style !== "type"; $("flipUI").hidden = S.style !== "flip";
@@ -622,7 +776,7 @@ dialog .acts { margin-top: 14px; }
   }
   let replayIds = new Set(), mixedN = 0;
   function roundDeck() {
-    let deck = shuffle(buildFacts());
+    let deck = S.lesson === "dec" ? decDeck(decCount()) : shuffle(buildFacts());
     if (S.count && S.count < deck.length) deck = deck.slice(0, S.count);
     replayIds = new Set(); mixedN = 0;
     if (S.mix) {
@@ -631,7 +785,7 @@ dialog .acts { margin-top: 14px; }
       const pool = missedPool().slice(0, Math.max(3, Math.round(size / 3)));
       for (const f of pool) replayIds.add(id(f));
       deck = deck.filter(f => !replayIds.has(id(f)));
-      const keep = S.count ? Math.max(0, size - pool.length) : deck.length;
+      const keep = S.count || S.lesson === "dec" ? Math.max(0, size - pool.length) : deck.length;
       deck = shuffle(deck.slice(0, keep).concat(pool));
       mixedN = pool.length;
     }
@@ -646,15 +800,35 @@ dialog .acts { margin-top: 14px; }
     cur = queue.shift(); locked = false;
     if ($("autoClear").checked) clearPad();
     const [x, o, y, z] = text(cur);
-    $("tagF").textContent = (replayIds.has(id(cur)) ? "Replay · " : "") + (cur.k === "mul" ? "Multiply" : "Divide");
-    $("factF").innerHTML = `${x}<span class="op">${o}</span>${y}<span class="op">=</span><span class="q">?</span>`;
-    $("factB").innerHTML = `${x}<span class="op">${o}</span>${y}<span class="op">=</span><span class="q">${z}</span>`;
+    $("tagF").textContent = (replayIds.has(id(cur)) ? "Replay · " : "") + { mul: "Multiply", div: "Divide", add: "Add", sub: "Subtract" }[cur.k];
+    if (isDec(cur) && S.decLayout === "stack") {
+      $("factF").className = $("factB").className = "stack";
+      $("factF").innerHTML = stacked(cur, false); $("factB").innerHTML = stacked(cur, true);
+    } else {
+      $("factF").className = $("factB").className = "fact";
+      $("factF").innerHTML = `${x}<span class="op">${o}</span>${y}<span class="op">=</span><span class="q">?</span>`;
+      $("factB").innerHTML = `${x}<span class="op">${o}</span>${y}<span class="op">=</span><span class="q">${z}</span>`;
+    }
     $("entry").value = "";
     $("grade").hidden = true; $("flipBtn").hidden = false;
     const done = total - queue.length - 1;
     $("prog").style.width = (done / total * 100) + "%";
     $("leftN").textContent = `${queue.length + 1} left`;
     if (S.style === "type" && matchMedia("(pointer:fine)").matches) $("entry").focus();
+  }
+
+  // Worksheet-style card: numbers right-aligned with their decimal points in one column
+  function stacked(f, withAns) {
+    const [x, o, y, z] = text(f), nums = withAns ? [x, y, z] : [x, y];
+    const intW = Math.max(...nums.map(n => n.split(".")[0].length)), fracW = Math.max(...nums.map(n => (n.split(".")[1] || "").length));
+    const cell = n => {
+      const [w, fr = ""] = n.split(".");
+      const lead = " ".repeat(intW - w.length), tail = "0".repeat(fracW - fr.length) + (fr || !fracW ? "" : "");
+      return `${lead}${w}${fr || fracW ? `<span class="dot">${fr ? "." : "<span class=pad>.</span>"}</span>` : ""}${fr}<span class="pad">${tail}</span>`;
+    };
+    return `<div class="ln2"><span class="op pad">${o}</span><span>${cell(x)}</span></div>`
+      + `<div class="ln2"><span class="op">${o}</span><span>${cell(y)}</span></div><div class="rule"></div>`
+      + (withAns ? `<div class="ln2 ans"><span class="op pad">${o}</span><span>${cell(z)}</span></div>` : `<div class="q">?</div>`);
   }
 
   function record(right) {
@@ -672,12 +846,13 @@ dialog .acts { margin-top: 14px; }
     if (locked) return;
     const v = $("entry").value.trim(); if (!v) return;
     locked = true;
-    const ans = text(cur)[3], right = +v === ans;
+    const right = isDec(cur) ? decVal(v) === decAns(cur) : +v === text(cur)[3];
     record(right);
     const card = $("card"), fb = $("fb");
     card.classList.add(right ? "right" : "wrong", "turned");
     fb.className = "feedback " + (right ? "ok" : "no");
-    fb.textContent = right ? pick(["Nice!", "Correct!", "You got it!", "Great job!"]) : `Not quite: ${plain(cur)}. It'll come back soon.`;
+    fb.textContent = right ? pick(["Nice!", "Correct!", "You got it!", "Great job!"])
+      : `Not quite: ${plain(cur)}.` + (isDec(cur) && cur.xp !== cur.yp ? " Line up the decimal points first." : " It'll come back soon.");
     setTimeout(next, right ? 700 : 2000);
   }
   const pick = a => a[Math.random() * a.length | 0];
@@ -701,7 +876,9 @@ dialog .acts { margin-top: 14px; }
     $("missedWrap").hidden = !missed.length; $("redoMissed").hidden = !missed.length;
     $("missedList").innerHTML = missed.map(f => `<span>${plain(f)}</span>`).join("");
     if (n) {
-      H.push({ at: Date.now(), kind: roundKind, mode: roundMode, tables: S.tables.slice(), upTo: S.upTo, n, ok, secs, mixed: mixedN });
+      H.push(roundLesson === "dec"
+        ? { at: Date.now(), lesson: "dec", kind: roundKind, decOp: S.decOp, decPlaces: S.decPlaces.slice(), n, ok, secs, mixed: mixedN }
+        : { at: Date.now(), lesson: "tables", kind: roundKind, mode: roundMode, tables: S.tables.slice(), upTo: S.upTo, n, ok, secs, mixed: mixedN });
       saveU("history", H);
     }
     $("savedNote").textContent = n ? `Saved to ${userName()}'s progress.` : "";
@@ -710,13 +887,29 @@ dialog .acts { margin-top: 14px; }
   }
 
   // Keypad
-  $("keypad").innerHTML = [1, 2, 3, 4, 5, 6, 7, 8, 9, "⌫", 0, "OK"].map(k => `<button data-k="${k}" class="${k === "OK" ? "go" : ""}">${k}</button>`).join("");
+  // Decimals get a "." key, with OK across the bottom
+  const maxLen = () => roundLesson === "dec" ? 9 : 4;
+  function drawKeypad() {
+    const keys = roundLesson === "dec" ? [1, 2, 3, 4, 5, 6, 7, 8, 9, ".", 0, "⌫", "OK"] : [1, 2, 3, 4, 5, 6, 7, 8, 9, "⌫", 0, "OK"];
+    $("keypad").classList.toggle("dec", roundLesson === "dec");
+    $("keypad").innerHTML = keys.map(k => `<button data-k="${k}" class="${k === "OK" ? "go" + (roundLesson === "dec" ? " wide" : "") : k === "." ? "dotk" : ""}">${k}</button>`).join("");
+  }
+  const typeKey = k => {
+    const en = $("entry");
+    if (k === "." && (roundLesson !== "dec" || en.value.includes("."))) return;
+    if (en.value.length < maxLen()) en.value += k;
+  };
+  drawKeypad();
   $("keypad").addEventListener("click", e => {
     const k = e.target.dataset.k; if (k === undefined || locked) return;
     const en = $("entry");
-    if (k === "OK") check(); else if (k === "⌫") en.value = en.value.slice(0, -1); else if (en.value.length < 4) en.value += k;
+    if (k === "OK") check(); else if (k === "⌫") en.value = en.value.slice(0, -1); else typeKey(k);
   });
-  $("entry").addEventListener("input", e => { e.target.value = e.target.value.replace(/\D/g, "").slice(0, 4); });
+  $("entry").addEventListener("input", e => {
+    let v = e.target.value.replace(roundLesson === "dec" ? /[^\d.]/g : /\D/g, "");
+    const i = v.indexOf("."); if (i >= 0) v = v.slice(0, i + 1) + v.slice(i + 1).replace(/\./g, "");
+    e.target.value = v.slice(0, maxLen());
+  });
   $("entry").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); check(); } });
   document.addEventListener("keydown", e => {
     if ($("drill").hidden) return;
@@ -724,7 +917,7 @@ dialog .acts { margin-top: 14px; }
       if (e.key === " " || e.key === "Enter") { e.preventDefault(); $("card").classList.contains("turned") ? grade(true) : flip(); }
       else if (e.key === "ArrowRight") grade(true);
       else if (e.key === "ArrowLeft") grade(false);
-    } else if (document.activeElement !== $("entry") && /^\d$/.test(e.key) && !locked) { $("entry").value += e.key; }
+    } else if (document.activeElement !== $("entry") && /^[\d.]$/.test(e.key) && !locked) { typeKey(e.key); }
     else if (document.activeElement !== $("entry") && e.key === "Backspace") { $("entry").value = $("entry").value.slice(0, -1); }
     else if (document.activeElement !== $("entry") && e.key === "Enter") check();
     if (e.key === "Escape") { show("setup"); render(); }
@@ -741,6 +934,21 @@ dialog .acts { margin-top: 14px; }
   $("homeBtn").onclick = () => { show("setup"); render(); };
   $("redoMissed").onclick = () => start(shuffle(missed.slice()), "missed");
   $("weakBtn").onclick = () => {
+    if (S.lesson === "dec") {
+      // Missed problems first, then new ones like the weakest kind (operation and places) so far
+      const st = {};
+      for (const [k, p] of Object.entries(P)) { const f = parseId(k); if (!f || !isDec(f)) continue; const key = f.k + ansPlaces(f), a = st[key] || (st[key] = [0, 0]); a[0] += p[0]; a[1] += p[1]; }
+      const worst = Object.entries(st).sort((a, b) => a[1][0] / (a[1][0] + a[1][1]) - b[1][0] / (b[1][0] + b[1][1]))[0];
+      const deck = missedPool().slice(0, decCount());
+      if (deck.length < decCount()) {
+        const keep = { decOp: S.decOp, decPlaces: S.decPlaces };
+        if (worst) { S.decOp = worst[0].slice(0, 3); S.decPlaces = [+worst[0].slice(3)]; }
+        const ids = new Set(deck.map(id));
+        for (const f of decDeck(decCount())) if (deck.length < decCount() && !ids.has(id(f))) deck.push(f);
+        Object.assign(S, keep);
+      }
+      return start(shuffle(deck), "weak");
+    }
     // Weakest first: facts tried and missed, then untried, from the chosen tables and facts
     const facts = buildFacts().map(f => ({ f, lv: level(f), p: P[id(f)] }));
     const score = x => x.lv === -1 ? 1.5 : x.lv === 3 ? 9 : x.lv - (x.p ? x.p[1] / (x.p[0] + x.p[1] + 1) : 0);

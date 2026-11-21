@@ -1,6 +1,6 @@
 # Math Facts Trainer
 
-Flash card drills for the multiplication tables, division facts, and adding and subtracting decimals. The whole app is one page, `index.html`, and it runs in any browser with no install.
+Flash card drills for the multiplication tables, division facts, adding and subtracting whole numbers up to 1,000, and adding and subtracting decimals. The whole app is one page, `index.html`, and it runs in any browser with no install.
 
 **Open it:** https://khainguyen24.github.io/math-facts/
 
@@ -8,6 +8,7 @@ On an iPad, open the link in Safari, tap Share › Add to Home Screen, and it op
 
 ## Features
 - Times tables & division: multiplication, division or mixed; any of the 1–12 tables, up to ×10 or ×12
+- Adding & subtracting to 1,000: adding, subtracting or mixed; numbers up to 20, 100 or 1,000; carrying and borrowing any, always or never; stacked by place value or in a line
 - Adding & subtracting decimals: 1 to 4 decimal places, same or different places in each number, whole part under 10, 100, 1,000 or 10,000, shown stacked with the decimal points lined up or in a line; a "." key on the keypad
 - Type the answer on the on-screen keypad, or flip the card and grade yourself
 - Missed cards come back a few cards later; "Drill missed facts" after each round

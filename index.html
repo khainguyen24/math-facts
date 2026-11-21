@@ -212,7 +212,7 @@ body.ink-on .card .inkclear { display: block; }
   <section id="setup" style="display:grid;gap:22px">
     <header>
       <h1>Math Facts Trainer</h1>
-      <p class="sub">Flash card drills for times tables, division and decimals.</p>
+      <p class="sub">Flash card drills for times tables, division, adding and subtracting, and decimals.</p>
     </header>
 
     <div class="panel">
@@ -227,8 +227,42 @@ body.ink-on .card .inkclear { display: block; }
         <span class="label">Lesson</span>
         <div class="chips" id="lessonChips">
           <button class="chip" data-lesson="tables">Times tables &amp; division</button>
+          <button class="chip" data-lesson="whole">Adding &amp; subtracting to 1,000</button>
           <button class="chip" data-lesson="dec">Adding &amp; subtracting decimals</button>
         </div>
+      </div>
+      <div class="opts" id="wholeOpts">
+      <div class="row">
+        <span class="label">Problems</span>
+        <div class="chips">
+          <button class="chip" data-decop="add">Adding +</button>
+          <button class="chip" data-decop="sub">Subtracting −</button>
+          <button class="chip" data-decop="mix">Mixed</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="label">Numbers up to</span>
+        <div class="chips">
+          <button class="chip" data-wmax="20">20</button>
+          <button class="chip" data-wmax="100">100</button>
+          <button class="chip" data-wmax="1000">1,000</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="label">Carrying &amp; borrowing</span>
+        <div class="chips">
+          <button class="chip" data-wreg="any">Any</button>
+          <button class="chip" data-wreg="yes">Always</button>
+          <button class="chip" data-wreg="no">Never</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="label">Show the problem</span>
+        <div class="chips">
+          <button class="chip" data-declayout="stack">Stacked, lined up by place value</button>
+          <button class="chip" data-declayout="line">In a line</button>
+        </div>
+      </div>
       </div>
       <div class="opts" id="decOpts">
       <div class="row">
@@ -441,7 +475,7 @@ body.ink-on .card .inkclear { display: block; }
   let uid = load("user", users[0].id);
   if (!users.some(u => u.id === uid)) uid = users[0].id;
   const DEFAULTS = { mode: "mul", tables: [2, 3, 4, 5, 6, 7, 8, 9, 10], upTo: 12, style: "type", count: 20, grid: "mul", sound: true, mix: false,
-    lesson: "tables", decOp: "add", decPlaces: [1, 2], decAlign: "same", decWhole: 10, decLayout: "stack", ink: true };
+    lesson: "tables", decOp: "add", decPlaces: [1, 2], decAlign: "same", decWhole: 10, decLayout: "stack", ink: true, wMax: 1000, wReg: "any" };
   const saveU = (k, v) => save(k + ":" + uid, v);
   // S: settings, P: progress per fact { "mul:7x8": [right, wrong, streak] }, H: finished rounds
   let S, P, H;
@@ -467,14 +501,16 @@ body.ink-on .card .inkclear { display: block; }
     document.querySelectorAll("[data-style]").forEach(b => b.setAttribute("aria-pressed", b.dataset.style === S.style));
     document.querySelectorAll("[data-c]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.c === S.count));
     document.querySelectorAll("[data-g]").forEach(b => b.setAttribute("aria-pressed", b.dataset.g === S.grid));
-    const dec = S.lesson === "dec";
+    const dec = S.lesson !== "tables";  // decimals and whole-number adding share the random-problem machinery
     document.querySelectorAll("[data-lesson]").forEach(b => b.setAttribute("aria-pressed", b.dataset.lesson === S.lesson));
     document.querySelectorAll("[data-decop]").forEach(b => b.setAttribute("aria-pressed", b.dataset.decop === S.decOp));
     document.querySelectorAll("[data-place]").forEach(b => b.setAttribute("aria-pressed", S.decPlaces.includes(+b.dataset.place)));
     document.querySelectorAll("[data-decalign]").forEach(b => b.setAttribute("aria-pressed", b.dataset.decalign === S.decAlign));
     document.querySelectorAll("[data-decwhole]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.decwhole === S.decWhole));
     document.querySelectorAll("[data-declayout]").forEach(b => b.setAttribute("aria-pressed", b.dataset.declayout === S.decLayout));
-    $("decOpts").hidden = !dec; $("tablesOpts").hidden = dec;
+    document.querySelectorAll("[data-wmax]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.wmax === S.wMax));
+    document.querySelectorAll("[data-wreg]").forEach(b => b.setAttribute("aria-pressed", b.dataset.wreg === S.wReg));
+    $("decOpts").hidden = S.lesson !== "dec"; $("wholeOpts").hidden = S.lesson !== "whole"; $("tablesOpts").hidden = dec;
     $("gridChips").hidden = dec; $("grid").hidden = dec; $("dgrid").hidden = !dec; $("dgridHint").hidden = !dec;
     $("countChips").querySelector('[data-c="0"]').hidden = dec;
     if (dec) {
@@ -489,7 +525,7 @@ body.ink-on .card .inkclear { display: block; }
     const pool = missedPool();
     $("mixChip").setAttribute("aria-pressed", !!S.mix);
     $("mixCnt").textContent = pool.length;
-    const what = dec ? "decimal problem" : "fact";
+    const what = S.lesson === "dec" ? "decimal problem" : dec ? "problem" : "fact";
     $("mixHint").textContent = !pool.length ? `No missed ${what}s to replay yet.` : S.mix ? `Up to a third of each round will be ${what}s you got wrong before${dec ? "" : ", from any table"}. One leaves the list after you get it right twice in a row.` : `${pool.length} ${what}${pool.length === 1 ? "" : "s"} still to fix.`;
     saveU("settings", S);
   }
@@ -508,6 +544,8 @@ body.ink-on .card .inkclear { display: block; }
     else if (d.decalign) S.decAlign = d.decalign;
     else if (d.decwhole) S.decWhole = +d.decwhole;
     else if (d.declayout) S.decLayout = d.declayout;
+    else if (d.wmax) S.wMax = +d.wmax;
+    else if (d.wreg) S.wReg = d.wreg;
     else if (b.id === "allT") S.tables = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
     else if (b.id === "noneT") S.tables = [];
     else if (b.id === "sndBtn") S.sound = !S.sound;
@@ -549,10 +587,32 @@ body.ink-on .card .inkclear { display: block; }
     if (k === "sub" && f.x === f.y) return makeDec(k);
     return f;
   }
+  // Whole numbers: { k, x, xp: 0, y, yp: 0 }, same shape as decimals. Sums stay at or under S.wMax.
+  const digits = v => String(v).split("").reverse().map(Number);
+  function regroups(k, x, y) {
+    const a = digits(x), b = digits(y);
+    if (k === "add") { for (let i = 0; i < a.length; i++) if ((a[i] || 0) + (b[i] || 0) >= 10) return true; return false; }
+    for (let i = 0; i < a.length; i++) if ((a[i] || 0) < (b[i] || 0)) return true; return false;
+  }
+  function makeWhole(k) {
+    const M = S.wMax;
+    for (let t = 0; t < 300; t++) {
+      let x, y;
+      if (k === "add") { x = 1 + rnd(M - 1); y = 1 + rnd(M - x); }
+      else { x = 2 + rnd(M - 1); y = 1 + rnd(x - 1); }
+      // Mostly skip trivial ones like 1 + 1 once the range is bigger
+      if (M >= 100 && t < 200 && Math.min(x, y) < M / 20) continue;
+      if (S.wReg !== "any" && t < 290 && regroups(k, x, y) !== (S.wReg === "yes")) continue;
+      return { k, x: x * 10000, xp: 0, y: y * 10000, yp: 0 };
+    }
+    return { k, x: 20000, xp: 0, y: 10000, yp: 0 };
+  }
+  const isWhole = f => isDec(f) && !f.xp && !f.yp;
+  const lessonOf = f => !isDec(f) ? "tables" : isWhole(f) ? "whole" : "dec";
   function decDeck(n) {
     const out = [], seen = new Set();
     for (let tries = 0; out.length < n && tries < n * 50; tries++) {
-      const k = S.decOp === "mix" ? (rnd(2) ? "add" : "sub") : S.decOp, f = makeDec(k);
+      const k = S.decOp === "mix" ? (rnd(2) ? "add" : "sub") : S.decOp, f = S.lesson === "whole" ? makeWhole(k) : makeDec(k);
       if (!seen.has(id(f))) { seen.add(id(f)); out.push(f); }
     }
     return out;
@@ -642,7 +702,7 @@ body.ink-on .card .inkclear { display: block; }
     const pl = s => (s.split(".")[1] || "").length;
     return { k: m[1], x: decVal(m[2]), xp: pl(m[2]), y: decVal(m[3]), yp: pl(m[3]) };
   };
-  const inLesson = f => (S.lesson === "dec") === isDec(f);
+  const inLesson = f => lessonOf(f) === S.lesson;
   function missedPool() {
     return Object.entries(P).filter(([, p]) => p[1] > 0 && p[2] < 2).map(([k, p]) => ({ f: parseId(k), p })).filter(x => x.f && inLesson(x.f))
       .sort((x, y) => (y.p[1] / (y.p[0] + y.p[1])) - (x.p[1] / (x.p[0] + x.p[1]))).map(x => x.f);
@@ -651,7 +711,9 @@ body.ink-on .card .inkclear { display: block; }
   // ---- History charts -------------------------------------------------------------------------------
   const DRILL = { mul: "×", div: "÷", mix: "× ÷" };
   const placesTxt = ps => ps.length === 1 ? `${ps[0]} place${ps[0] > 1 ? "s" : ""}` : `${ps[0]}–${ps[ps.length - 1]} places`;
-  const drillTxt = r => r.lesson === "dec"
+  const drillTxt = r => r.lesson === "whole"
+    ? `${{ add: "+", sub: "−", mix: "+ −" }[r.decOp]} ${r.kind === "missed" ? "missed problems" : r.kind === "weak" ? "weakest problems" : "up to " + r.wMax.toLocaleString()}`
+    : r.lesson === "dec"
     ? `${{ add: "+", sub: "−", mix: "+ −" }[r.decOp]} decimals, ${r.kind === "missed" ? "missed problems" : r.kind === "weak" ? "weakest problems" : placesTxt(r.decPlaces)}`
     : `${DRILL[r.mode]} ${tablesTxt(r)}`;
   const fmtT = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
@@ -699,17 +761,21 @@ body.ink-on .card .inkclear { display: block; }
 
   // ---- Mastery grid ------------------------------------------------------------------------------
   const COL = { 1: "#7a3a30", 2: "#7a6430", 3: "#1d7a45" };
+  // Whole-number problems are grouped by their biggest number: up to 20, 100 or 1,000
+  const band = f => { const m = Math.max(f.x, f.y, decAns(f)) / 10000; return m <= 20 ? 20 : m <= 100 ? 100 : 1000; };
+  const catKey = f => f.k + (isWhole(f) ? "w" + band(f) : ansPlaces(f));
   function drawDecGrid() {
-    // Accuracy by operation and by the most decimal places in the problem
-    const st = {};
+    // Accuracy by operation and by the most decimal places (or number size) in the problem
+    const whole = S.lesson === "whole", st = {};
     for (const [k, p] of Object.entries(P)) {
-      const f = parseId(k); if (!f || !isDec(f)) continue;
-      const key = f.k + ansPlaces(f), a = st[key] || (st[key] = [0, 0]);
+      const f = parseId(k); if (!f || !isDec(f) || isWhole(f) !== whole) continue;
+      const key = catKey(f), a = st[key] || (st[key] = [0, 0]);
       a[0] += p[0]; a[1] += p[1];
     }
+    $("dgridHint").textContent = `Each box shows % right on the first try · problems done, grouped by ${whole ? "the biggest number in the problem" : "the most decimal places in the problem"}.`;
     let h = `<tr><th></th><th>Adding +</th><th>Subtracting −</th></tr>`;
-    for (let pl = 1; pl <= 4; pl++) {
-      h += `<tr><th>${pl} place${pl > 1 ? "s" : ""}</th>`;
+    for (const pl of whole ? ["w20", "w100", "w1000"] : [1, 2, 3, 4]) {
+      h += `<tr><th>${whole ? "Up to " + (+pl.slice(1)).toLocaleString() : `${pl} place${pl > 1 ? "s" : ""}`}</th>`;
       for (const k of ["add", "sub"]) {
         const a = st[k + pl], n = a ? a[0] + a[1] : 0, pct = n ? Math.round(a[0] / n * 100) : null;
         const lv = !n ? 0 : pct >= 90 && n >= 10 ? 3 : pct >= 70 ? 2 : 1;
@@ -862,7 +928,7 @@ body.ink-on .card .inkclear { display: block; }
   }
   let replayIds = new Set(), mixedN = 0;
   function roundDeck() {
-    let deck = S.lesson === "dec" ? decDeck(decCount()) : shuffle(buildFacts());
+    let deck = S.lesson !== "tables" ? decDeck(decCount()) : shuffle(buildFacts());
     if (S.count && S.count < deck.length) deck = deck.slice(0, S.count);
     replayIds = new Set(); mixedN = 0;
     if (S.mix) {
@@ -871,7 +937,7 @@ body.ink-on .card .inkclear { display: block; }
       const pool = missedPool().slice(0, Math.max(3, Math.round(size / 3)));
       for (const f of pool) replayIds.add(id(f));
       deck = deck.filter(f => !replayIds.has(id(f)));
-      const keep = S.count || S.lesson === "dec" ? Math.max(0, size - pool.length) : deck.length;
+      const keep = S.count || S.lesson !== "tables" ? Math.max(0, size - pool.length) : deck.length;
       deck = shuffle(deck.slice(0, keep).concat(pool));
       mixedN = pool.length;
     }
@@ -965,7 +1031,9 @@ body.ink-on .card .inkclear { display: block; }
     $("missedWrap").hidden = !missed.length; $("redoMissed").hidden = !missed.length;
     $("missedList").innerHTML = missed.map(f => `<span>${plain(f)}</span>`).join("");
     if (n) {
-      H.push(roundLesson === "dec"
+      H.push(roundLesson === "whole"
+        ? { at: Date.now(), lesson: "whole", kind: roundKind, decOp: S.decOp, wMax: S.wMax, wReg: S.wReg, n, ok, secs, mixed: mixedN }
+        : roundLesson === "dec"
         ? { at: Date.now(), lesson: "dec", kind: roundKind, decOp: S.decOp, decPlaces: S.decPlaces.slice(), n, ok, secs, mixed: mixedN }
         : { at: Date.now(), lesson: "tables", kind: roundKind, mode: roundMode, tables: S.tables.slice(), upTo: S.upTo, n, ok, secs, mixed: mixedN });
       saveU("history", H);
@@ -1025,15 +1093,15 @@ body.ink-on .card .inkclear { display: block; }
   $("homeBtn").onclick = () => { show("setup"); render(); };
   $("redoMissed").onclick = () => start(shuffle(missed.slice()), "missed");
   $("weakBtn").onclick = () => {
-    if (S.lesson === "dec") {
-      // Missed problems first, then new ones like the weakest kind (operation and places) so far
+    if (S.lesson !== "tables") {
+      // Missed problems first, then new ones like the weakest kind (operation and places or size) so far
       const st = {};
-      for (const [k, p] of Object.entries(P)) { const f = parseId(k); if (!f || !isDec(f)) continue; const key = f.k + ansPlaces(f), a = st[key] || (st[key] = [0, 0]); a[0] += p[0]; a[1] += p[1]; }
+      for (const [k, p] of Object.entries(P)) { const f = parseId(k); if (!f || !inLesson(f)) continue; const key = catKey(f), a = st[key] || (st[key] = [0, 0]); a[0] += p[0]; a[1] += p[1]; }
       const worst = Object.entries(st).sort((a, b) => a[1][0] / (a[1][0] + a[1][1]) - b[1][0] / (b[1][0] + b[1][1]))[0];
       const deck = missedPool().slice(0, decCount());
       if (deck.length < decCount()) {
-        const keep = { decOp: S.decOp, decPlaces: S.decPlaces };
-        if (worst) { S.decOp = worst[0].slice(0, 3); S.decPlaces = [+worst[0].slice(3)]; }
+        const keep = { decOp: S.decOp, decPlaces: S.decPlaces, wMax: S.wMax };
+        if (worst) { S.decOp = worst[0].slice(0, 3); const rest = worst[0].slice(3); if (rest[0] === "w") S.wMax = +rest.slice(1); else S.decPlaces = [+rest]; }
         const ids = new Set(deck.map(id));
         for (const f of decDeck(decCount())) if (deck.length < decCount() && !ids.has(id(f))) deck.push(f);
         Object.assign(S, keep);

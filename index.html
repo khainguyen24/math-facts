@@ -203,6 +203,32 @@ body.ink-on .card .inkclear { display: block; }
 .grid .c { background: var(--chip); color: transparent; }
 .grid .c:hover { color: var(--ink); }
 .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); align-items: center; }
+/* Fractions: built-up, numerator over denominator */
+.fact.fracline { display: flex; align-items: center; justify-content: center; gap: .22em; font-size: clamp(26px, min(10cqi, 24cqh), 84px); flex-wrap: nowrap; white-space: nowrap; }
+.bf { display: inline-flex; flex-direction: column; align-items: center; font-size: .64em; line-height: 1.08; vertical-align: middle; }
+.bf > span { padding: 0 .14em; min-width: 1em; text-align: center; }
+.bf > .dn { border-top: .09em solid currentColor; }
+.mx { display: inline-flex; align-items: center; gap: .08em; }
+.fact.fracline .blank { display: inline-block; width: 2.2em; }
+.fact.fracline .q .bf > .dn { border-color: var(--active-ink); }
+.fview { font: 600 34px var(--f-mono); min-width: 180px; min-height: 92px; padding: 6px 16px; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: .18em; cursor: text; }
+.fview.focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fview .bf { font-size: .8em; }
+.fview .slot { display: inline-block; width: .75em; height: 1em; border: 2px dashed #3a3b3e; border-radius: 5px; vertical-align: middle; margin: .04em 0; }
+.fview .slot.on { border-color: var(--accent); }
+.fview .on:not(.slot) { color: #fff; text-decoration: underline 2px var(--accent); text-underline-offset: 4px; }
+.entry.frhide { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.keypad.frac { grid-template-columns: repeat(4, min(76px, 20vw)); }
+.keypad.frac .go { grid-column: span 3; }
+.keypad .wordk { font: 600 16px var(--f-body); color: var(--active-ink); }
+.feedback.hm { color: var(--active-ink); }
+@media (max-width: 699.98px) {
+  body.pad-open .fview { font-size: 22px; min-height: 50px; padding: 0 10px; }
+  body.pad-open .keypad.frac { grid-template-columns: repeat(4, min(64px, 19vw)); gap: 6px; }
+  body.pad-open .keypad.frac button { height: 34px; font-size: 18px; }
+  body.pad-open .keypad.frac .wordk { font-size: 14px; }
+}
+@media (max-width: 560px) { .dgrid { border-spacing: 3px; font-size: 12px; } .dgrid td { min-width: 0; padding: 7px 5px; } .dgrid th { padding-right: 4px; } }
 .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 5px; }
 </style>
 </head>
@@ -212,7 +238,7 @@ body.ink-on .card .inkclear { display: block; }
   <section id="setup" style="display:grid;gap:22px">
     <header>
       <h1>Math Facts Trainer</h1>
-      <p class="sub">Flash card drills for times tables, division, adding and subtracting, and decimals.</p>
+      <p class="sub">Flash card drills for times tables, division, adding and subtracting, decimals, and fractions.</p>
     </header>
 
     <div class="panel">
@@ -229,6 +255,7 @@ body.ink-on .card .inkclear { display: block; }
           <button class="chip" data-lesson="tables">Times tables &amp; division</button>
           <button class="chip" data-lesson="whole">Adding &amp; subtracting to 1,000</button>
           <button class="chip" data-lesson="dec">Adding &amp; subtracting decimals</button>
+          <button class="chip" data-lesson="frac">Fractions &amp; mixed numbers</button>
         </div>
       </div>
       <div class="opts" id="wholeOpts">
@@ -298,6 +325,49 @@ body.ink-on .card .inkclear { display: block; }
         <div class="chips">
           <button class="chip" data-declayout="stack">Stacked, points lined up</button>
           <button class="chip" data-declayout="line">In a line</button>
+        </div>
+      </div>
+      </div>
+      <div class="opts" id="fracOpts">
+      <div class="row">
+        <span class="label">Problems</span>
+        <div class="chips">
+          <button class="chip" data-fracop="add">Adding +</button>
+          <button class="chip" data-fracop="sub">Subtracting −</button>
+          <button class="chip" data-fracop="mul">Multiplying ×</button>
+          <button class="chip" data-fracop="div">Dividing ÷</button>
+          <button class="chip" data-fracop="mix">Mixed</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="label">Numbers</span>
+        <div class="chips">
+          <button class="chip" data-frackind="frac">Fractions (like 3/4)</button>
+          <button class="chip" data-frackind="mixed">Mixed numbers (like 2 1/3)</button>
+          <button class="chip" data-frackind="both">Both</button>
+        </div>
+      </div>
+      <div class="row" id="fracDenRow">
+        <span class="label">Denominators when adding &amp; subtracting</span>
+        <div class="chips">
+          <button class="chip" data-fracden="like">Same (like 1/5 + 3/5)</button>
+          <button class="chip" data-fracden="unlike">Different (like 1/2 + 1/3)</button>
+          <button class="chip" data-fracden="any">Either</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="label">Denominators up to</span>
+        <div class="chips">
+          <button class="chip num" data-fracmax="6">6</button>
+          <button class="chip num" data-fracmax="10">10</button>
+          <button class="chip num" data-fracmax="12">12</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="label">Answers</span>
+        <div class="chips">
+          <button class="chip" data-fracsimp="simplest">Simplest form (1 1/2, not 6/4)</button>
+          <button class="chip" data-fracsimp="any">Any equal answer is OK</button>
         </div>
       </div>
       </div>
@@ -402,6 +472,7 @@ body.ink-on .card .inkclear { display: block; }
 
     <div class="answer" id="typeUI">
       <input class="entry" id="entry" inputmode="numeric" autocomplete="off" aria-label="Your answer">
+      <div class="fview" id="fview" hidden aria-hidden="true"></div>
       <div class="keypad" id="keypad"></div>
       <span class="hint" id="typeHint">Type with the keypad or your keyboard. Enter checks.</span>
     </div>
@@ -475,7 +546,8 @@ body.ink-on .card .inkclear { display: block; }
   let uid = load("user", users[0].id);
   if (!users.some(u => u.id === uid)) uid = users[0].id;
   const DEFAULTS = { mode: "mul", tables: [2, 3, 4, 5, 6, 7, 8, 9, 10], upTo: 12, style: "type", count: 20, grid: "mul", sound: true, mix: false,
-    lesson: "tables", decOp: "add", decPlaces: [1, 2], decAlign: "same", decWhole: 10, decLayout: "stack", ink: true, wMax: 1000, wReg: "any" };
+    lesson: "tables", decOp: "add", decPlaces: [1, 2], decAlign: "same", decWhole: 10, decLayout: "stack", ink: true, wMax: 1000, wReg: "any",
+    fracOp: "add", fracKind: "frac", fracDen: "like", fracMax: 10, fracSimp: "simplest" };
   const saveU = (k, v) => save(k + ":" + uid, v);
   // S: settings, P: progress per fact { "mul:7x8": [right, wrong, streak] }, H: finished rounds
   let S, P, H;
@@ -520,7 +592,13 @@ body.ink-on .card .inkclear { display: block; }
     document.querySelectorAll("[data-declayout]").forEach(b => b.setAttribute("aria-pressed", b.dataset.declayout === S.decLayout));
     document.querySelectorAll("[data-wmax]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.wmax === S.wMax));
     document.querySelectorAll("[data-wreg]").forEach(b => b.setAttribute("aria-pressed", b.dataset.wreg === S.wReg));
-    $("decOpts").hidden = S.lesson !== "dec"; $("wholeOpts").hidden = S.lesson !== "whole"; $("tablesOpts").hidden = dec;
+    document.querySelectorAll("[data-fracop]").forEach(b => b.setAttribute("aria-pressed", b.dataset.fracop === S.fracOp));
+    document.querySelectorAll("[data-frackind]").forEach(b => b.setAttribute("aria-pressed", b.dataset.frackind === S.fracKind));
+    document.querySelectorAll("[data-fracden]").forEach(b => b.setAttribute("aria-pressed", b.dataset.fracden === S.fracDen));
+    document.querySelectorAll("[data-fracmax]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.fracmax === S.fracMax));
+    document.querySelectorAll("[data-fracsimp]").forEach(b => b.setAttribute("aria-pressed", b.dataset.fracsimp === S.fracSimp));
+    $("fracDenRow").hidden = S.fracOp === "mul" || S.fracOp === "div";
+    $("decOpts").hidden = S.lesson !== "dec"; $("wholeOpts").hidden = S.lesson !== "whole"; $("fracOpts").hidden = S.lesson !== "frac"; $("tablesOpts").hidden = dec;
     $("gridChips").hidden = dec; $("grid").hidden = dec; $("dgrid").hidden = !dec; $("dgridHint").hidden = !dec;
     $("countChips").querySelector('[data-c="0"]').hidden = dec;
     if (dec) {
@@ -556,6 +634,11 @@ body.ink-on .card .inkclear { display: block; }
     else if (d.declayout) S.decLayout = d.declayout;
     else if (d.wmax) S.wMax = +d.wmax;
     else if (d.wreg) S.wReg = d.wreg;
+    else if (d.fracop) S.fracOp = d.fracop;
+    else if (d.frackind) S.fracKind = d.frackind;
+    else if (d.fracden) S.fracDen = d.fracden;
+    else if (d.fracmax) S.fracMax = +d.fracmax;
+    else if (d.fracsimp) S.fracSimp = d.fracsimp;
     else if (b.id === "allT") S.tables = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
     else if (b.id === "noneT") S.tables = [];
     else if (b.id === "sndBtn") S.sound = !S.sound;
@@ -572,11 +655,29 @@ body.ink-on .card .inkclear { display: block; }
   // A decimal problem is { k: "add"|"sub", x, xp, y, yp }: x and y are in ten-thousandths (3.5 → 35000) with
   // xp / yp decimal places, so the sums are exact whole-number math.
   const isDec = f => f.k === "add" || f.k === "sub";
+  // A fraction problem is { k: "fadd"|"fsub"|"fmul"|"fdiv", a, b } where a and b are { w, n, d }: w and n/d (w is 0 for a plain fraction)
+  const isFrac = f => f.k[0] === "f";
+  const gcd = (a, b) => { while (b) [a, b] = [b, a % b]; return a; };
+  const rat = (n, d) => { const g = gcd(Math.abs(n), d) || 1; return [n / g, d / g]; };
+  const toRat = q => [q.w * q.d + q.n, q.d];
+  const ratLess = (p, q) => p[0] * q[1] < q[0] * p[1];
+  function fracAns(f) {
+    const [an, ad] = toRat(f.a), [bn, bd] = toRat(f.b);
+    return f.k === "fadd" ? rat(an * bd + bn * ad, ad * bd) : f.k === "fsub" ? rat(an * bd - bn * ad, ad * bd)
+      : f.k === "fmul" ? rat(an * bn, ad * bd) : rat(an * bd, ad * bn);
+  }
+  // Simplest form: a whole number, a fraction in lowest terms, or a mixed number
+  const mixedOf = ([n, d]) => ({ w: Math.floor(n / d), n: n % d, d });
+  const frStr = q => q.n === 0 ? String(q.w) : (q.w ? q.w + " " : "") + q.n + "/" + q.d;
+  const frId = q => (q.w ? q.w + "_" : "") + q.n + "/" + q.d;
+  const FOP = { fadd: "+", fsub: "−", fmul: "×", fdiv: "÷" };
+  const bfHTML = (n, d, cls = ["", ""]) => `<span class="bf"><span class="nm ${cls[0]}">${n}</span><span class="dn ${cls[1]}">${d}</span></span>`;
+  const frHTML = q => q.n === 0 ? `<span>${q.w}</span>` : `<span class="mx">${q.w ? `<span>${q.w}</span>` : ""}${bfHTML(q.n, q.d)}</span>`;
   const decStr = (v, p) => { const s = String(v).padStart(5, "0"), w = s.slice(0, -4).replace(/^0+(?=\d)/, ""); return p ? `${w}.${s.slice(-4, -4 + p || undefined)}` : w; };
   const decAns = f => f.k === "add" ? f.x + f.y : f.x - f.y;
   const ansPlaces = f => Math.max(f.xp, f.yp);
-  const id = f => isDec(f) ? `${f.k}:${decStr(f.x, f.xp)}${f.k === "add" ? "+" : "-"}${decStr(f.y, f.yp)}` : `${f.k}:${f.a}x${f.b}`;
-  const text = f => isDec(f) ? [decStr(f.x, f.xp), f.k === "add" ? "+" : "−", decStr(f.y, f.yp), decStr(decAns(f), ansPlaces(f))]
+  const id = f => isFrac(f) ? `${f.k}:${frId(f.a)},${frId(f.b)}` : isDec(f) ? `${f.k}:${decStr(f.x, f.xp)}${f.k === "add" ? "+" : "-"}${decStr(f.y, f.yp)}` : `${f.k}:${f.a}x${f.b}`;
+  const text = f => isFrac(f) ? [frStr(f.a), FOP[f.k], frStr(f.b), frStr(mixedOf(fracAns(f)))] : isDec(f) ? [decStr(f.x, f.xp), f.k === "add" ? "+" : "−", decStr(f.y, f.yp), decStr(decAns(f), ansPlaces(f))]
     : f.k === "mul" ? [f.a, "×", f.b, f.a * f.b] : [f.a * f.b, "÷", f.a, f.b];
   const rnd = n => Math.random() * n | 0;
   const decCount = () => S.count || 20;
@@ -617,10 +718,39 @@ body.ink-on .card .inkclear { display: block; }
     return { k, x: 20000, xp: 0, y: 10000, yp: 0 };
   }
   const isWhole = f => isDec(f) && !f.xp && !f.yp;
-  const lessonOf = f => !isDec(f) ? "tables" : isWhole(f) ? "whole" : "dec";
+  const lessonOf = f => isFrac(f) ? "frac" : !isDec(f) ? "tables" : isWhole(f) ? "whole" : "dec";
+  // Fractions: proper fractions in lowest terms (or with a shared denominator), mixed numbers with whole parts 1–5 (1–3 for × and ÷)
+  function frPart(d, mixed, small, reduce) {
+    const n = 1 + rnd(d - 1), w = mixed ? 1 + rnd(small ? 3 : 5) : 0;
+    if (!reduce) return { w, n, d };
+    const [rn, rd] = rat(n, d); return { w, n: rn, d: rd };
+  }
+  function makeFrac(op) {
+    const k = "f" + op, M = S.fracMax, addSub = op === "add" || op === "sub";
+    for (let t = 0; t < 400; t++) {
+      const mA = S.fracKind === "mixed" || (S.fracKind === "both" && rnd(2)), mB = S.fracKind === "mixed" || (S.fracKind === "both" && rnd(2));
+      const like = addSub && (S.fracDen === "like" || (S.fracDen === "any" && rnd(2)));
+      const d1 = 2 + rnd(M - 1), d2 = like ? d1 : 2 + rnd(M - 1);
+      let a = frPart(d1, mA, !addSub, !like), b = frPart(d2, mB, !addSub, !like);
+      if (addSub && !like && a.d === b.d && t < 390) continue;
+      if (like && a.n === b.n && !a.w && !b.w && t < 390) continue;
+      // The bigger number goes first, so subtraction stays above zero
+      if (addSub && ratLess(toRat(a), toRat(b))) [a, b] = [b, a];
+      const f = { k, a, b }, ans = fracAns(f);
+      if (ans[0] <= 0) continue;
+      if (ans[1] > 144 && t < 390) continue;
+      return f;
+    }
+    return { k, a: { w: 0, n: 3, d: 4 }, b: { w: 0, n: 1, d: 4 } };
+  }
   function decDeck(n) {
     const out = [], seen = new Set();
     for (let tries = 0; out.length < n && tries < n * 50; tries++) {
+      if (S.lesson === "frac") {
+        const f = makeFrac(S.fracOp === "mix" ? ["add", "sub", "mul", "div"][rnd(4)] : S.fracOp);
+        if (!seen.has(id(f))) { seen.add(id(f)); out.push(f); }
+        continue;
+      }
       const k = S.decOp === "mix" ? (rnd(2) ? "add" : "sub") : S.decOp, f = S.lesson === "whole" ? makeWhole(k) : makeDec(k);
       if (!seen.has(id(f))) { seen.add(id(f)); out.push(f); }
     }
@@ -707,6 +837,8 @@ body.ink-on .card .inkclear { display: block; }
   // A fact stays in the replay list from a miss until it's answered right twice in a row
   const parseId = k => {
     let m = k.match(/^(mul|div):(\d+)x(\d+)$/); if (m) return { k: m[1], a: +m[2], b: +m[3] };
+    m = k.match(/^(f(?:add|sub|mul|div)):((?:\d+_)?\d+\/\d+),((?:\d+_)?\d+\/\d+)$/);
+    if (m) { const q = s => { const r = s.match(/^(?:(\d+)_)?(\d+)\/(\d+)$/); return { w: +(r[1] || 0), n: +r[2], d: +r[3] }; }; return { k: m[1], a: q(m[2]), b: q(m[3]) }; }
     m = k.match(/^(add|sub):(\d+(?:\.\d+)?)[+-](\d+(?:\.\d+)?)$/); if (!m) return null;
     const pl = s => (s.split(".")[1] || "").length;
     return { k: m[1], x: decVal(m[2]), xp: pl(m[2]), y: decVal(m[3]), yp: pl(m[3]) };
@@ -720,7 +852,10 @@ body.ink-on .card .inkclear { display: block; }
   // ---- History charts -------------------------------------------------------------------------------
   const DRILL = { mul: "×", div: "÷", mix: "× ÷" };
   const placesTxt = ps => ps.length === 1 ? `${ps[0]} place${ps[0] > 1 ? "s" : ""}` : `${ps[0]}–${ps[ps.length - 1]} places`;
-  const drillTxt = r => r.lesson === "whole"
+  const FRK = { frac: "fractions", mixed: "mixed numbers", both: "fractions & mixed numbers" };
+  const drillTxt = r => r.lesson === "frac"
+    ? `${{ add: "+", sub: "−", mul: "×", div: "÷", mix: "+ − × ÷" }[r.fracOp]} ${r.kind === "missed" ? "missed fractions" : r.kind === "weak" ? "weakest fractions" : FRK[r.fracKind]}`
+    : r.lesson === "whole"
     ? `${{ add: "+", sub: "−", mix: "+ −" }[r.decOp]} ${r.kind === "missed" ? "missed problems" : r.kind === "weak" ? "weakest problems" : "up to " + r.wMax.toLocaleString()}`
     : r.lesson === "dec"
     ? `${{ add: "+", sub: "−", mix: "+ −" }[r.decOp]} decimals, ${r.kind === "missed" ? "missed problems" : r.kind === "weak" ? "weakest problems" : placesTxt(r.decPlaces)}`
@@ -772,20 +907,21 @@ body.ink-on .card .inkclear { display: block; }
   const COL = { 1: "#7a3a30", 2: "#7a6430", 3: "#1d7a45" };
   // Whole-number problems are grouped by their biggest number: up to 20, 100 or 1,000
   const band = f => { const m = Math.max(f.x, f.y, decAns(f)) / 10000; return m <= 20 ? 20 : m <= 100 ? 100 : 1000; };
-  const catKey = f => f.k + (isWhole(f) ? "w" + band(f) : ansPlaces(f));
+  const catKey = f => isFrac(f) ? f.k + (f.a.w || f.b.w ? "m" : "p") : f.k + (isWhole(f) ? "w" + band(f) : ansPlaces(f));
   function drawDecGrid() {
     // Accuracy by operation and by the most decimal places (or number size) in the problem
-    const whole = S.lesson === "whole", st = {};
+    const whole = S.lesson === "whole", frac = S.lesson === "frac", st = {};
     for (const [k, p] of Object.entries(P)) {
-      const f = parseId(k); if (!f || !isDec(f) || isWhole(f) !== whole) continue;
+      const f = parseId(k); if (!f || !inLesson(f)) continue;
       const key = catKey(f), a = st[key] || (st[key] = [0, 0]);
       a[0] += p[0]; a[1] += p[1];
     }
-    $("dgridHint").textContent = `Each box shows % right on the first try · problems done, grouped by ${whole ? "the biggest number in the problem" : "the most decimal places in the problem"}.`;
-    let h = `<tr><th></th><th>Adding +</th><th>Subtracting −</th></tr>`;
-    for (const pl of whole ? ["w20", "w100", "w1000"] : [1, 2, 3, 4]) {
-      h += `<tr><th>${whole ? "Up to " + (+pl.slice(1)).toLocaleString() : `${pl} place${pl > 1 ? "s" : ""}`}</th>`;
-      for (const k of ["add", "sub"]) {
+    $("dgridHint").textContent = `Each box shows % right on the first try · problems done, grouped by ${frac ? "plain fractions or ones with a mixed number" : whole ? "the biggest number in the problem" : "the most decimal places in the problem"}.`;
+    const ops = frac ? ["fadd", "fsub", "fmul", "fdiv"] : ["add", "sub"];
+    let h = frac ? `<tr><th></th><th>Add +</th><th>Subtract −</th><th>Multiply ×</th><th>Divide ÷</th></tr>` : `<tr><th></th><th>Adding +</th><th>Subtracting −</th></tr>`;
+    for (const pl of frac ? ["p", "m"] : whole ? ["w20", "w100", "w1000"] : [1, 2, 3, 4]) {
+      h += `<tr><th>${frac ? (pl === "p" ? "Fractions" : "Mixed")  : whole ? "Up to " + (+pl.slice(1)).toLocaleString() : `${pl} place${pl > 1 ? "s" : ""}`}</th>`;
+      for (const k of ops) {
         const a = st[k + pl], n = a ? a[0] + a[1] : 0, pct = n ? Math.round(a[0] / n * 100) : null;
         const lv = !n ? 0 : pct >= 90 && n >= 10 ? 3 : pct >= 70 ? 2 : 1;
         h += `<td style="${lv ? "background:" + COL[lv] : ""}" title="${n ? `${a[0]} right, ${a[1]} wrong` : "Not tried"}">${n ? pct + "% · " + n : "–"}</td>`;
@@ -813,7 +949,12 @@ body.ink-on .card .inkclear { display: block; }
   let queue = [], total = 0, ok = 0, no = 0, missed = [], cur = null, locked = false, firstTry = new Set(), t0 = 0, lastDeck = null;
   const show = s => { ["setup", "drill", "done"].forEach(x => $(x).hidden = x !== s); if (s !== "drill") { closePad(); collapse(); } };
   // On a touch screen the app's own keypad is the input, so the system keyboard stays hidden
-  if (matchMedia("(pointer:coarse)").matches) { $("entry").setAttribute("inputmode", "none"); $("entry").readOnly = true; $("typeHint").textContent = "Tap the numbers, then OK."; }
+  const coarse = matchMedia("(pointer:coarse)").matches;
+  if (coarse) { $("entry").setAttribute("inputmode", "none"); $("entry").readOnly = true; $("typeHint").textContent = "Tap the numbers, then OK."; }
+  // The drawn fraction stands in for the hidden text box: clicking it types into the box
+  $("fview").onclick = () => { if (!coarse) $("entry").focus(); };
+  $("entry").addEventListener("focus", () => $("fview").classList.add("focus"));
+  $("entry").addEventListener("blur", () => $("fview").classList.remove("focus"));
 
   // ---- Scratchpad -----------------------------------------------------------------------------------
   // A drawing surface: finger, Apple Pencil or mouse. Used by the scratchpad and by the ink layer on the card.
@@ -931,6 +1072,7 @@ body.ink-on .card .inkclear { display: block; }
     drawKeypad();
     lastDeck = deck.slice();
     queue = deck.slice(); total = queue.length; ok = no = 0; missed = []; firstTry = new Set(); t0 = Date.now();
+    $("okN").textContent = "✓ 0"; $("noN").textContent = "✗ 0";
     $("typeUI").hidden = S.style !== "type"; $("flipUI").hidden = S.style !== "flip";
     $("card").classList.toggle("flip", S.style === "flip");
     show("drill"); next(); cardInk.size();
@@ -962,8 +1104,14 @@ body.ink-on .card .inkclear { display: block; }
     if ($("autoClear").checked) clearPad();
     collapse(); workH = 0; cardInk.clear(); requestAnimationFrame(() => cardInk.size());
     const [x, o, y, z] = text(cur);
-    $("tagF").textContent = (replayIds.has(id(cur)) ? "Replay · " : "") + { mul: "Multiply", div: "Divide", add: "Add", sub: "Subtract" }[cur.k];
-    if (isDec(cur) && S.decLayout === "stack") {
+    $("tagF").textContent = (replayIds.has(id(cur)) ? "Replay · " : "") + { mul: "Multiply", div: "Divide", add: "Add", sub: "Subtract", fadd: "Add", fsub: "Subtract", fmul: "Multiply", fdiv: "Divide" }[cur.k];
+    if (isFrac(cur)) {
+      // Built-up fractions in a line, with open space after "=" to write the answer
+      $("factF").className = $("factB").className = "fact fracline";
+      const lhs = `${frHTML(cur.a)}<span class="op">${o}</span>${frHTML(cur.b)}<span class="op">=</span>`;
+      $("factF").innerHTML = lhs + `<span class="blank"></span>`;
+      $("factB").innerHTML = lhs + `<span class="q">${frHTML(mixedOf(fracAns(cur)))}</span>`;
+    } else if (isDec(cur) && S.decLayout === "stack") {
       $("factF").className = $("factB").className = "stack";
       $("factF").innerHTML = stacked(cur, false); $("factB").innerHTML = stacked(cur, true);
     } else {
@@ -971,7 +1119,7 @@ body.ink-on .card .inkclear { display: block; }
       $("factF").innerHTML = `${x}<span class="op">${o}</span>${y}<span class="op">=</span><span class="q">?</span>`;
       $("factB").innerHTML = `${x}<span class="op">${o}</span>${y}<span class="op">=</span><span class="q">${z}</span>`;
     }
-    $("entry").value = "";
+    $("entry").value = ""; drawFview();
     $("grade").hidden = true; $("flipBtn").hidden = false;
     const done = total - queue.length - 1;
     $("prog").style.width = (done / total * 100) + "%";
@@ -1009,17 +1157,44 @@ body.ink-on .card .inkclear { display: block; }
     if (locked) return;
     if (work) return collapse();
     const v = $("entry").value.trim(); if (!v) return;
+    let right;
+    if (isFrac(cur)) {
+      const q = parseFr(v), fb = $("fb");
+      if (!q) { fb.className = "feedback hm"; fb.textContent = /\s\d*$|\s$/.test($("entry").value) ? "Finish the fraction: tap “over”, then the bottom number." : "Add the bottom number."; return; }
+      const ans = fracAns(cur), mine = toRat(q);
+      right = mine[0] * ans[1] === ans[0] * mine[1];
+      if (right && S.fracSimp === "simplest") {
+        const want = mixedOf(ans), hint = simpHint(q, want);
+        // Equal but not simplified: no penalty, just a nudge to finish the job
+        if (hint) { fb.className = "feedback hm"; fb.textContent = "That's equal, but not in simplest form. " + hint; return; }
+      }
+    } else right = isDec(cur) ? decVal(v) === decAns(cur) : +v === text(cur)[3];
     locked = true;
-    const right = isDec(cur) ? decVal(v) === decAns(cur) : +v === text(cur)[3];
     record(right);
     const card = $("card"), fb = $("fb");
     card.classList.add(right ? "right" : "wrong", "turned");
     fb.className = "feedback " + (right ? "ok" : "no");
     fb.textContent = right ? pick(["Nice!", "Correct!", "You got it!", "Great job!"])
-      : `Not quite: ${plain(cur)}.` + (isDec(cur) && cur.xp !== cur.yp ? " Line up the decimal points first." : " It'll come back soon.");
+      : `Not quite: ${plain(cur)}.` + (isDec(cur) && cur.xp !== cur.yp ? " Line up the decimal points first."
+        : (cur.k === "fadd" || cur.k === "fsub") && cur.a.d !== cur.b.d ? " Find a common denominator first."
+        : cur.k === "fdiv" ? " Flip the second fraction, then multiply."
+        : isFrac(cur) && (cur.a.w || cur.b.w) && cur.k === "fmul" ? " Change mixed numbers to improper fractions first." : " It'll come back soon.");
     setTimeout(next, right ? 700 : 2000);
   }
   const pick = a => a[Math.random() * a.length | 0];
+  // Fraction answers are typed as "3", "3/4" or "1 3/4"
+  function parseFr(v) {
+    let m = v.match(/^(\d+)$/); if (m) return { w: +m[1], n: 0, d: 1 };
+    m = v.match(/^(?:(\d+) )?(\d+)\/(\d+)$/); if (!m || +m[3] === 0) return null;
+    return { w: +(m[1] || 0), n: +m[2], d: +m[3] };
+  }
+  function simpHint(q, want) {
+    if (want.n === 0) return q.n === 0 && q.d === 1 ? "" : `It's a whole number.`;
+    if (q.n >= q.d) return "The top is bigger than the bottom, so make it a mixed number.";
+    if (gcd(q.n, q.d) > 1) return "Divide the top and bottom by the same number.";
+    if (q.w === 0 && want.w > 0) return "Write it as a mixed number.";
+    return "";
+  }
 
   function flip() {
     if (locked || S.style !== "flip") return;
@@ -1040,7 +1215,9 @@ body.ink-on .card .inkclear { display: block; }
     $("missedWrap").hidden = !missed.length; $("redoMissed").hidden = !missed.length;
     $("missedList").innerHTML = missed.map(f => `<span>${plain(f)}</span>`).join("");
     if (n) {
-      H.push(roundLesson === "whole"
+      H.push(roundLesson === "frac"
+        ? { at: Date.now(), lesson: "frac", kind: roundKind, fracOp: S.fracOp, fracKind: S.fracKind, fracDen: S.fracDen, fracMax: S.fracMax, n, ok, secs, mixed: mixedN }
+        : roundLesson === "whole"
         ? { at: Date.now(), lesson: "whole", kind: roundKind, decOp: S.decOp, wMax: S.wMax, wReg: S.wReg, n, ok, secs, mixed: mixedN }
         : roundLesson === "dec"
         ? { at: Date.now(), lesson: "dec", kind: roundKind, decOp: S.decOp, decPlaces: S.decPlaces.slice(), n, ok, secs, mixed: mixedN }
@@ -1054,26 +1231,62 @@ body.ink-on .card .inkclear { display: block; }
 
   // Keypad
   // Decimals get a "." key, with OK across the bottom
-  const maxLen = () => roundLesson === "dec" ? 11 : 4;
+  const maxLen = () => roundLesson === "dec" ? 11 : roundLesson === "frac" ? 11 : 4;
+  // Fractions get "and" (whole part, then the fraction) and "over" (top, then bottom) keys
+  const FKEY = { and: " ", over: "/" };
   function drawKeypad() {
-    const keys = roundLesson === "dec" ? [1, 2, 3, 4, 5, 6, 7, 8, 9, ".", 0, "⌫", "OK"] : [1, 2, 3, 4, 5, 6, 7, 8, 9, "⌫", 0, "OK"];
+    const fr = roundLesson === "frac";
+    const keys = fr ? [1, 2, 3, "⌫", 4, 5, 6, "and", 7, 8, 9, "over", 0, "OK"]
+      : roundLesson === "dec" ? [1, 2, 3, 4, 5, 6, 7, 8, 9, ".", 0, "⌫", "OK"] : [1, 2, 3, 4, 5, 6, 7, 8, 9, "⌫", 0, "OK"];
     $("keypad").classList.toggle("dec", roundLesson === "dec");
+    $("keypad").classList.toggle("frac", fr);
     $("entry").classList.toggle("dec", roundLesson === "dec");
-    $("keypad").innerHTML = keys.map(k => `<button data-k="${k}" class="${k === "OK" ? "go" + (roundLesson === "dec" ? " wide" : "") : k === "." ? "dotk" : ""}">${k}</button>`).join("");
+    $("entry").classList.toggle("frhide", fr); $("fview").hidden = !fr;
+    $("typeHint").textContent = fr ? (coarse ? "For 1 3/4 tap 1, and, 3, over, 4. Then OK." : "For 1 3/4 type 1, space, 3/4. Enter checks.")
+      : coarse ? "Tap the numbers, then OK." : "Type with the keypad or your keyboard. Enter checks.";
+    $("keypad").innerHTML = keys.map(k => `<button data-k="${k}" class="${k === "OK" ? "go" + (roundLesson === "dec" ? " wide" : "") : k === "." ? "dotk" : FKEY[k] ? "wordk" : ""}">${k}</button>`).join("");
+  }
+  // Keeps a fraction answer well formed: whole, " ", top, "/", bottom; up to 3 digits each
+  function fracClean(v) {
+    let out = "";
+    for (const ch of v) {
+      const last = out.slice(-1), seg = out.split(/[ /]/).pop();
+      if (/\d/.test(ch)) { if (seg.length < 3) out += ch; }
+      else if (ch === " ") { if (/\d/.test(last) && !/[ /]/.test(out)) out += " "; }
+      else if (ch === "/") { if (/\d/.test(last) && !out.includes("/")) out += "/"; }
+    }
+    return out;
+  }
+  // The typed fraction drawn as it will look on paper, with dashed boxes for the parts still to fill in
+  function drawFview() {
+    if (roundLesson !== "frac") return;
+    const v = $("entry").value, slot = on => `<span class="slot${on ? " on" : ""}"></span>`;
+    const sp = v.indexOf(" "), w = sp >= 0 ? v.slice(0, sp) : "", rest = sp >= 0 ? v.slice(sp + 1) : v;
+    let h;
+    if (sp < 0 && !rest.includes("/")) h = rest ? `<span class="on">${rest}</span>` : slot(true);
+    else {
+      const [n, d] = rest.includes("/") ? rest.split("/") : [rest, null];
+      const top = n ? n : slot(d === null), bot = d === null ? slot(false) : d || slot(true);
+      h = (w ? `<span>${w}</span>` : "") + bfHTML(top, bot, [d === null && n ? "on" : "", d ? "on" : ""]);
+    }
+    $("fview").innerHTML = h;
   }
   const typeKey = k => {
     collapse();
     const en = $("entry");
+    if (roundLesson === "frac") { en.value = fracClean(en.value + (FKEY[k] || k)); drawFview(); return; }
     if (k === "." && (roundLesson !== "dec" || en.value.includes("."))) return;
     if (en.value.length < maxLen()) en.value += k;
   };
+  const backKey = () => { const en = $("entry"); en.value = en.value.slice(0, -1); drawFview(); };
   drawKeypad();
   $("keypad").addEventListener("click", e => {
     const k = e.target.dataset.k; if (k === undefined || locked) return;
     const en = $("entry");
-    if (k === "OK") check(); else if (k === "⌫") en.value = en.value.slice(0, -1); else typeKey(k);
+    if (k === "OK") check(); else if (k === "⌫") backKey(); else typeKey(k);
   });
   $("entry").addEventListener("input", e => {
+    if (roundLesson === "frac") { e.target.value = fracClean(e.target.value); return drawFview(); }
     let v = e.target.value.replace(roundLesson === "dec" ? /[^\d.]/g : /\D/g, "");
     const i = v.indexOf("."); if (i >= 0) v = v.slice(0, i + 1) + v.slice(i + 1).replace(/\./g, "");
     e.target.value = v.slice(0, maxLen());
@@ -1085,8 +1298,8 @@ body.ink-on .card .inkclear { display: block; }
       if (e.key === " " || e.key === "Enter") { e.preventDefault(); $("card").classList.contains("turned") ? grade(true) : flip(); }
       else if (e.key === "ArrowRight") grade(true);
       else if (e.key === "ArrowLeft") grade(false);
-    } else if (document.activeElement !== $("entry") && /^[\d.]$/.test(e.key) && !locked) { typeKey(e.key); }
-    else if (document.activeElement !== $("entry") && e.key === "Backspace") { $("entry").value = $("entry").value.slice(0, -1); }
+    } else if (document.activeElement !== $("entry") && (/^[\d.]$/.test(e.key) || (roundLesson === "frac" && /^[ /]$/.test(e.key))) && !locked) { e.preventDefault(); typeKey(e.key); }
+    else if (document.activeElement !== $("entry") && e.key === "Backspace") { backKey(); }
     else if (document.activeElement !== $("entry") && e.key === "Enter") check();
     if (e.key === "Escape") { show("setup"); render(); }
   });
@@ -1109,8 +1322,9 @@ body.ink-on .card .inkclear { display: block; }
       const worst = Object.entries(st).sort((a, b) => a[1][0] / (a[1][0] + a[1][1]) - b[1][0] / (b[1][0] + b[1][1]))[0];
       const deck = missedPool().slice(0, decCount());
       if (deck.length < decCount()) {
-        const keep = { decOp: S.decOp, decPlaces: S.decPlaces, wMax: S.wMax };
-        if (worst) { S.decOp = worst[0].slice(0, 3); const rest = worst[0].slice(3); if (rest[0] === "w") S.wMax = +rest.slice(1); else S.decPlaces = [+rest]; }
+        const keep = { decOp: S.decOp, decPlaces: S.decPlaces, wMax: S.wMax, fracOp: S.fracOp, fracKind: S.fracKind };
+        if (worst && S.lesson === "frac") { S.fracOp = worst[0].slice(1, 4); S.fracKind = worst[0][4] === "m" ? "mixed" : "frac"; }
+        else if (worst) { S.decOp = worst[0].slice(0, 3); const rest = worst[0].slice(3); if (rest[0] === "w") S.wMax = +rest.slice(1); else S.decPlaces = [+rest]; }
         const ids = new Set(deck.map(id));
         for (const f of decDeck(decCount())) if (deck.length < decCount() && !ids.has(id(f))) deck.push(f);
         Object.assign(S, keep);

@@ -484,6 +484,16 @@ body.ink-on .card .inkclear { display: block; }
     S = Object.assign({}, DEFAULTS, load("settings:" + uid, {}));
     P = load("progress:" + uid, {});
     H = load("history:" + uid, []);
+    // Older saves could have the smaller number on top of an addition; flip those so it's always bigger on top
+    let moved = false;
+    Object.keys(P).forEach(key => {
+      const m = key.match(/^add:([\d.]+)\+([\d.]+)$/);
+      if (!m || +m[1] >= +m[2]) return;
+      const to = `add:${m[2]}+${m[1]}`, a = P[key], b = P[to];
+      P[to] = b ? [a[0] + b[0], a[1] + b[1], Math.min(a[2], b[2])] : a;
+      delete P[key]; moved = true;
+    });
+    if (moved) save("progress:" + uid, P);
   }
   loadUser(uid);
   const userName = () => (users.find(u => u.id === uid) || {}).name || "";
@@ -581,9 +591,8 @@ body.ink-on .card .inkclear { display: block; }
     if (S.decAlign === "diff" && S.decPlaces.length > 1) { do { yp = S.decPlaces[rnd(S.decPlaces.length)]; } while (yp === xp); }
     else if (S.decAlign === "diff") yp = xp === 4 ? 4 : Math.min(4, xp + 1 + rnd(4 - xp));
     let f = { k, x: decNum(xp), xp, y: decNum(yp), yp };
-    if (rnd(2)) f = { k, x: f.y, xp: f.yp, y: f.x, yp: f.xp };
-    // Subtraction stays at zero or above: the bigger number goes on top
-    if (k === "sub" && f.x < f.y) f = { k, x: f.y, xp: f.yp, y: f.x, yp: f.xp };
+    // The bigger number always goes on top (this also keeps subtraction at zero or above)
+    if (f.x < f.y) f = { k, x: f.y, xp: f.yp, y: f.x, yp: f.xp };
     if (k === "sub" && f.x === f.y) return makeDec(k);
     return f;
   }
@@ -598,7 +607,7 @@ body.ink-on .card .inkclear { display: block; }
     const M = S.wMax;
     for (let t = 0; t < 300; t++) {
       let x, y;
-      if (k === "add") { x = 1 + rnd(M - 1); y = 1 + rnd(M - x); }
+      if (k === "add") { x = 1 + rnd(M - 1); y = 1 + rnd(M - x); if (x < y) [x, y] = [y, x]; }
       else { x = 2 + rnd(M - 1); y = 1 + rnd(x - 1); }
       // Mostly skip trivial ones like 1 + 1 once the range is bigger
       if (M >= 100 && t < 200 && Math.min(x, y) < M / 20) continue;

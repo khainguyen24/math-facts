@@ -62,7 +62,7 @@ body.pad-open .top .grow { display: none; }
 body.pad-open .top .stats { margin-left: auto; gap: 10px; }
 @media (max-width: 560px) { .top .grow { display: none; } .top .stats { margin-left: auto; } }
 body.pad-open .lbl { display: none; }
-@media (max-width: 560px) { .lbl { display: none; } .stats { gap: 10px; } }
+@media (max-width: 560px) { .lbl { display: none; } .stats { gap: 8px; font-size: 12px; } .top { gap: 6px; } .top .btn { padding: 8px 10px; } }
 @media (max-width: 699.98px) {
   :root { --pad-h: 38vh; }
   body.pad-open main { padding-top: 10px; gap: 10px; }
@@ -157,8 +157,16 @@ dialog .acts { margin-top: 14px; }
 .dgrid td { background: var(--chip); border-radius: 6px; padding: 8px 12px; text-align: center; font-family: var(--f-mono); min-width: 96px; }
 .opts { display: grid; gap: 14px; }
 /* Ink layer over the card */
-.card .ink { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 18px; z-index: 2; pointer-events: none; touch-action: none; }
+.card .inkwrap { position: absolute; inset: 0; overflow: hidden; border-radius: 18px; z-index: 2; pointer-events: none; }
+.card .ink { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; touch-action: none; }
+/* Work mode: writing on the card grows it down over the number pad; the handle brings the pad back */
+.card .inkgrow { position: absolute; right: 10px; bottom: 10px; z-index: 3; display: none; font: 600 14px var(--f-body); background: var(--chip); color: var(--ink); border: 1px solid var(--line); border-radius: 999px; padding: 8px 18px; cursor: pointer; white-space: nowrap; box-shadow: 0 4px 14px rgba(0,0,0,.35); }
+body.ink-on .card .inkgrow { display: block; }
+body.work .card .inkgrow { right: auto; left: 50%; bottom: 14px; transform: translateX(-50%); font-size: 16px; padding: 11px 24px; background: var(--accent-strong); border-color: var(--accent-strong); color: #fff; }
+body.work #typeUI, body.work #flipUI, body.work #fb { display: none !important; }
+body.work .face { align-content: start; padding-top: var(--padTop, 0px); }
 body.ink-on .card .ink { pointer-events: auto; cursor: crosshair; }
+body.ink-on .card .inkwrap { pointer-events: auto; }
 .card .inkclear { position: absolute; top: 10px; right: 10px; z-index: 3; display: none; font: 600 12px var(--f-body); background: var(--chip); color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; cursor: pointer; }
 body.ink-on .card .inkclear { display: block; }
 #inkBtn[aria-pressed="true"], #padBtn[aria-pressed="true"] { background: var(--accent-strong); border-color: var(--accent-strong); color: #fff; }
@@ -350,8 +358,9 @@ body.ink-on .card .inkclear { display: block; }
     <div class="card" id="card">
       <div class="face front"><span class="tag" id="tagF"></span><div class="fact" id="factF"></div></div>
       <div class="face back"><span class="tag">Answer</span><div class="fact" id="factB"></div></div>
-      <canvas class="ink" id="cardInk" aria-label="Write on the card"></canvas>
+      <div class="inkwrap"><canvas class="ink" id="cardInk" aria-label="Write on the card"></canvas></div>
       <button class="inkclear" id="inkClear" title="Erase your writing on the card">Erase</button>
+      <button class="inkgrow" id="growBtn"></button>
     </div>
     <div class="feedback" id="fb"></div>
 
@@ -725,7 +734,7 @@ body.ink-on .card .inkclear { display: block; }
 
   // ---- Drill -------------------------------------------------------------------------------------
   let queue = [], total = 0, ok = 0, no = 0, missed = [], cur = null, locked = false, firstTry = new Set(), t0 = 0, lastDeck = null;
-  const show = s => { ["setup", "drill", "done"].forEach(x => $(x).hidden = x !== s); if (s !== "drill") closePad(); };
+  const show = s => { ["setup", "drill", "done"].forEach(x => $(x).hidden = x !== s); if (s !== "drill") { closePad(); collapse(); } };
   // On a touch screen the app's own keypad is the input, so the system keyboard stays hidden
   if (matchMedia("(pointer:coarse)").matches) { $("entry").setAttribute("inputmode", "none"); $("entry").readOnly = true; $("typeHint").textContent = "Tap the numbers, then OK."; }
 
@@ -735,6 +744,7 @@ body.ink-on .card .inkclear { display: block; }
   function inkLayer(cv, opts = {}) {
     const cx = cv.getContext("2d"); let drawing = null;
     function size() {
+      if (opts.box) { const [bw, bh] = opts.box(); cv.style.width = bw + "px"; cv.style.height = bh + "px"; }
       const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
       if (!r.width || !r.height) return;
       const w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
@@ -745,6 +755,7 @@ body.ink-on .card .inkclear { display: block; }
     }
     const at = e => { const r = cv.getBoundingClientRect(), dpr = cv.width / r.width; return [(e.clientX - r.left) * dpr, (e.clientY - r.top) * dpr]; };
     cv.addEventListener("pointerdown", e => {
+      opts.onStart?.();
       e.preventDefault(); size(); cv.setPointerCapture(e.pointerId);
       drawing = { id: e.pointerId, p: at(e) };
       const dpr = cv.width / cv.getBoundingClientRect().width, er = opts.color ? false : erasing, col = opts.color || pen;
@@ -772,8 +783,8 @@ body.ink-on .card .inkclear { display: block; }
     document.querySelectorAll("[data-pen]").forEach(b => b.setAttribute("aria-pressed", !erasing && b.dataset.pen === pen));
     $("eraser").setAttribute("aria-pressed", erasing);
   }
-  function openPad() { document.body.classList.add("pad-open"); setTimeout(() => { sizeCanvas(); cardInk.size(); }, 280); $("padBtn").setAttribute("aria-pressed", true); }
-  function closePad() { document.body.classList.remove("pad-open"); $("padBtn")?.setAttribute("aria-pressed", false); setTimeout(() => cardInk.size(), 280); }
+  function openPad() { document.body.classList.add("pad-open"); setTimeout(() => { sizeCanvas(); relayout(); }, 280); $("padBtn").setAttribute("aria-pressed", true); }
+  function closePad() { document.body.classList.remove("pad-open"); $("padBtn")?.setAttribute("aria-pressed", false); setTimeout(() => relayout(), 280); }
   $("padBtn").onclick = e => { document.body.classList.contains("pad-open") ? closePad() : openPad(); e.currentTarget.blur(); };
   $("padClose").onclick = closePad;
   $("padClear").onclick = clearPad;
@@ -781,16 +792,57 @@ body.ink-on .card .inkclear { display: block; }
   document.querySelectorAll("[data-pen]").forEach(b => b.onclick = () => { pen = b.dataset.pen; erasing = false; drawPens(); });
   $("autoClear").checked = load("autoClear", true);
   $("autoClear").onchange = e => save("autoClear", e.target.checked);
-  addEventListener("resize", () => { if (document.body.classList.contains("pad-open")) sizeCanvas(); cardInk.size(); });
+  addEventListener("resize", () => { if (document.body.classList.contains("pad-open")) sizeCanvas(); relayout(); });
 
   // Ink right on the card: carry digits, borrowing, the answer under the line. Cleared for each card.
-  const cardInk = inkLayer($("cardInk"), { color: "#6cc4ff", width: 3 });
+  let work = false, workH = 0;
+  const cardInk = inkLayer($("cardInk"), {
+    color: "#6cc4ff", width: 3,
+    // The canvas keeps its tallest size, so writing low on the card survives collapsing and growing again
+    box: () => [$("card").clientWidth, Math.max(workH, $("card").clientHeight)],
+    onStart: () => expand(),
+  });
+  // Room for the card in work mode: down to the bottom of the screen, or to the scratchpad on a phone
+  function workHeight() {
+    const card = $("card"), top = card.getBoundingClientRect().top;
+    const narrowPad = document.body.classList.contains("pad-open") && innerWidth < 700;
+    const bottom = narrowPad ? $("pad").getBoundingClientRect().top : innerHeight;
+    return Math.max(card.offsetHeight, Math.round(bottom - top - 14));
+  }
+  function drawGrow() { $("growBtn").textContent = work ? "⌃ Number pad" : "⌄ More room"; $("growBtn").title = work ? "Shrink the card and bring back the number pad" : "Make the card taller to work it out"; }
+  function expand() {
+    if (work || !S.ink) return;
+    const card = $("card"), fact = $("factF");
+    // Pin the problem where it is now (same size, same spot in the card), so the digits don't move under her writing
+    const y0 = fact.getBoundingClientRect().top - card.getBoundingClientRect().top;
+    for (const el of [$("factF"), $("factB")]) el.style.fontSize = getComputedStyle(fact).fontSize;
+    const h = workHeight();
+    work = true; document.body.classList.add("work");
+    card.style.height = h + "px"; workH = Math.max(workH, h);
+    card.style.setProperty("--padTop", "0px");
+    const y1 = fact.getBoundingClientRect().top - card.getBoundingClientRect().top;
+    card.style.setProperty("--padTop", (y0 - y1) + "px");
+    cardInk.size(); drawGrow();
+  }
+  function collapse() {
+    if (!work) return;
+    work = false; document.body.classList.remove("work");
+    const card = $("card"); card.style.height = ""; card.style.removeProperty("--padTop");
+    for (const el of [$("factF"), $("factB")]) el.style.fontSize = "";
+    drawGrow();
+    const ui = S.style === "type" ? $("typeUI") : $("flipUI");
+    if (ui.getBoundingClientRect().bottom > innerHeight) ui.scrollIntoView({ block: "end", behavior: "smooth" });
+    if (S.style === "type" && matchMedia("(pointer:fine)").matches) $("entry").focus({ preventScroll: true });
+  }
+  function relayout() { if (work) { const h = workHeight(); $("card").style.height = h + "px"; workH = Math.max(workH, h); } cardInk.size(); }
+  $("growBtn").onclick = e => { e.stopPropagation(); work ? collapse() : expand(); e.currentTarget.blur(); };
+  drawGrow();
   function drawInk() {
     document.body.classList.toggle("ink-on", !!S.ink);
     $("inkBtn").setAttribute("aria-pressed", !!S.ink);
     $("inkBtn").title = S.ink ? "Writing on the card is on" : "Write on the card";
   }
-  $("inkBtn").onclick = e => { S.ink = !S.ink; saveU("settings", S); drawInk(); cardInk.size(); e.currentTarget.blur(); };
+  $("inkBtn").onclick = e => { S.ink = !S.ink; saveU("settings", S); if (!S.ink) collapse(); drawInk(); cardInk.size(); e.currentTarget.blur(); };
   $("inkClear").onclick = e => { e.stopPropagation(); cardInk.clear(); };
   drawPens();
 
@@ -830,7 +882,7 @@ body.ink-on .card .inkclear { display: block; }
     if (!queue.length) return finish();
     cur = queue.shift(); locked = false;
     if ($("autoClear").checked) clearPad();
-    cardInk.clear();
+    collapse(); workH = 0; cardInk.clear(); requestAnimationFrame(() => cardInk.size());
     const [x, o, y, z] = text(cur);
     $("tagF").textContent = (replayIds.has(id(cur)) ? "Replay · " : "") + { mul: "Multiply", div: "Divide", add: "Add", sub: "Subtract" }[cur.k];
     if (isDec(cur) && S.decLayout === "stack") {
@@ -877,6 +929,7 @@ body.ink-on .card .inkclear { display: block; }
 
   function check() {
     if (locked) return;
+    if (work) return collapse();
     const v = $("entry").value.trim(); if (!v) return;
     locked = true;
     const right = isDec(cur) ? decVal(v) === decAns(cur) : +v === text(cur)[3];
@@ -929,6 +982,7 @@ body.ink-on .card .inkclear { display: block; }
     $("keypad").innerHTML = keys.map(k => `<button data-k="${k}" class="${k === "OK" ? "go" + (roundLesson === "dec" ? " wide" : "") : k === "." ? "dotk" : ""}">${k}</button>`).join("");
   }
   const typeKey = k => {
+    collapse();
     const en = $("entry");
     if (k === "." && (roundLesson !== "dec" || en.value.includes("."))) return;
     if (en.value.length < maxLen()) en.value += k;

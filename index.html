@@ -147,7 +147,7 @@ dialog .acts { margin-top: 14px; }
 .stack { padding-top: .55em; font: 600 clamp(18px, min(11cqi, 15cqh), 60px)/1.18 var(--f-mono); color: #e7e7e7; display: grid; justify-items: end; }
 .stack .ln2 { white-space: pre; display: flex; gap: .5em; }
 .stack .ln2 .op { color: var(--accent); }
-.stack .ln2 .pad { visibility: hidden; }
+.stack .ghost { visibility: hidden; }  /* placeholder digits that keep the columns lined up */
 .stack .dot { color: var(--active-ink); }
 .stack .rule { width: 100%; border-top: 3px solid var(--muted); margin: .12em 0 .1em; }
 .stack .q { color: var(--active-ink); justify-self: center; }
@@ -856,12 +856,12 @@ body.ink-on .card .inkclear { display: block; }
     const cell = n => {
       const [w, fr = ""] = n.split(".");
       const lead = " ".repeat(intW - w.length), tail = "0".repeat(fracW - fr.length) + (fr || !fracW ? "" : "");
-      return `${lead}${w}${fr || fracW ? `<span class="dot">${fr ? "." : "<span class=pad>.</span>"}</span>` : ""}${fr}<span class="pad">${tail}</span>`;
+      return `${lead}${w}${fr || fracW ? `<span class="dot">${fr ? "." : "<span class=ghost>.</span>"}</span>` : ""}${fr}<span class="ghost">${tail}</span>`;
     };
-    return `<div class="ln2"><span class="op pad">${o}</span><span>${cell(x)}</span></div>`
+    return `<div class="ln2"><span class="op ghost">${o}</span><span>${cell(x)}</span></div>`
       + `<div class="ln2"><span class="op">${o}</span><span>${cell(y)}</span></div><div class="rule"></div>`
       // No "?" on the front: the row under the line stays empty so the answer can be written there
-      + `<div class="ln2 ans"${withAns ? "" : ' style="visibility:hidden"'}><span class="op pad">${o}</span><span>${cell(z)}</span></div>`;
+      + `<div class="ln2 ans"${withAns ? "" : ' style="visibility:hidden"'}><span class="op ghost">${o}</span><span>${cell(z)}</span></div>`;
   }
 
   function record(right) {
